@@ -14,7 +14,7 @@ LIBS := -L../lib -lavdevice -lavfilter -lpostproc -lavformat -lavcodec -ldl -lXf
 
 CPPFLAGS =  -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -pthread -Wall -fPIC -Werror -g -Iinclude
 
-INC := vwriter.h app-fault.h ring-buffer.h ring-buffer-uint8.h null-stream.h env-writer.h
+INC := app-fault.h ring-buffer.h ring-buffer-uint8.h null-stream.h env-writer.h
 
 #
 # Link commands

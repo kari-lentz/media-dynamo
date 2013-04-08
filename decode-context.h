@@ -11,6 +11,8 @@ extern "C"
 #include <libavutil/samplefmt.h>
 #include <libavutil/opt.h>
 #include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+#include <libavutil/pixfmt.h>
 }
 
 #include <stdio.h>
@@ -19,15 +21,12 @@ extern "C"
 #include <iostream>
 #include <exception>
 #include "app-fault.h"
-#include "vwriter.h"
 #include "ring-buffer-uint8.h"
 #include "logger.h"
 
 using namespace std;
 
 #define OUT_BUFFER_SIZE 16384
-
-typedef vwriter<uint8_t> vwriter_t;
 
 typedef void* (*encode_context_thread_t)(void*);
 typedef int (*avcodec_decode_function_t) (AVCodecContext *avctx, AVFrame *picture, int *got_picture_ptr, const AVPacket *avpkt);
@@ -54,7 +53,9 @@ protected:
     avcodec_decode_function_t avcodec_decode_function_;
 
     int stream_idx_;
-    vwriter_t vwriter_;
+    ring_buffer_t* buffer_;
+    specific_streamer<decode_context, uint8_t> functor_;
+
     AVFrame* frame_;
     size_t write_pos_;
     size_t max_pos_;
@@ -64,7 +65,7 @@ protected:
 
     AVFormatContext *format_context_;
 
-    void write_ring_buffer(uint8_t* buffer, size_t len);
+    int fill_buffer(uint8_t* buffer, int size);
 
     void decode_packet(AVFrame* frame, int *got_frame, AVPacket& pkt);
     void call(int start_at);
@@ -77,7 +78,7 @@ public:
 
     // handle various input formats
     //
-    decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, AVMediaType type, avcodec_decode_function_t avcodec_decode_function);
+    decode_context(const char* mp4_file_path, ring_buffer_t* buffer, AVMediaType type, avcodec_decode_function_t avcodec_decode_function);
     virtual ~decode_context();
 
     void operator()(int start_at = 0);

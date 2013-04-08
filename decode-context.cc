@@ -58,6 +58,32 @@ void open_codec_context(int *stream_idx, AVFormatContext *fmt_ctx, enum AVMediaT
     }
 }
 
+int decode_context::fill_buffer(uint8_t* buffer, int size)
+{
+    if( eof_p_ ) return 0;
+    if( error_p_ ) return -1;
+
+    AVCodecContext* codec_context = get_codec_context();
+
+    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, codec_context->pix_fmt, codec_context->width, codec_context->height, PIX_FMT_YUYV422, SWS_BILINEAR, 0, 0, 0);
+
+    if( !sws_context )
+    {
+        error_p_ = true;
+        return -1;
+    }
+
+    //Scale the raw data/convert it to our video buffer...
+    //
+    uint8_t* data[1];
+    data[0] = buffer;
+
+    sws_scale(sws_context, frame_->data, frame_->linesize, 0, codec_context->height, data, frame_->linesize);
+    av_free( sws_context );
+
+    return codec_context->width * codec_context->height * 3;
+}
+
 AVCodecContext* decode_context::get_codec_context()
 {
     if( format_context_ && stream_idx_ >= 0 )
@@ -67,18 +93,6 @@ AVCodecContext* decode_context::get_codec_context()
     else
     {
         return NULL;
-    }
-}
-
-void decode_context::write_ring_buffer(uint8_t* buffer, size_t len)
-{
-    if( !error_p_ )
-    {
-        if( vwriter_(buffer, len) < 0 )
-        {
-            decode_context::logger << "seen some error" << endl;
-            error_p_ = true;
-        }
     }
 }
 
@@ -106,7 +120,7 @@ void decode_context::log_callback (void* ptr, int level, const char* fmt, va_lis
     va_end( ap_copy );
 }
 
-decode_context::decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, AVMediaType type, avcodec_decode_function_t avcodec_decode_function):mp4_file_path_(mp4_file_path), type_(type), avcodec_decode_function_(avcodec_decode_function), stream_idx_(-1), vwriter_( ring_buffer ), frame_(NULL),  write_pos_(0), max_pos_(0), remaining_stream_bytes_(0), eof_p_(false), error_p_(false)
+decode_context::decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, AVMediaType type, avcodec_decode_function_t avcodec_decode_function):mp4_file_path_(mp4_file_path), type_(type), avcodec_decode_function_(avcodec_decode_function), stream_idx_(-1), buffer_( ring_buffer ), functor_(this, &decode_context::fill_buffer), frame_(NULL),  write_pos_(0), max_pos_(0), remaining_stream_bytes_(0), eof_p_(false), error_p_(false)
 {
     av_log_set_callback( &decode_context::log_callback );
 }
@@ -139,6 +153,7 @@ decode_context::~decode_context()
     caux << "closing debug file if present" << endl;
 }
 
+
 void decode_context::decode_packet(AVFrame* frame, int *got_frame, AVPacket& pkt)
 {
     int ret = 0;
@@ -161,6 +176,11 @@ void decode_context::decode_packet(AVFrame* frame, int *got_frame, AVPacket& pkt
             stringstream ss;
             ss << "Error decoding video frame";
             throw app_fault( ss.str().c_str() );
+        }
+
+        if( got_frame )
+        {
+            buffer_->write_period( &functor_ );
         }
     }
 }
@@ -212,11 +232,23 @@ void decode_context::call(int start_at)
 
     int got_frame;
 
-    /* read frames from the file */
-    while (av_read_frame(format_context_, &pkt) >= 0)
+    try
     {
-        decode_packet(frame_, &got_frame, pkt);
-        av_free_packet(&pkt);
+        /* read frames from the file */
+        while (av_read_frame(format_context_, &pkt) >= 0)
+        {
+            decode_packet(frame_, &got_frame, pkt);
+            av_free_packet(&pkt);
+        }
+        eof_p_ = true;
+        buffer_->write_period( &functor_ );
     }
+    catch( app_fault& f )
+    {
+        logger << f << endl;
+        error_p_ = true;
+        buffer_->write_period( &functor_ );
+    }
+
 }
 
