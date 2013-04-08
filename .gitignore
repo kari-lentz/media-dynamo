@@ -1,0 +1,21 @@
+# Lines starting with '#' are considered comments.
+# Ignore objects and archives.
+*~
+*.pdf
+*.[oa]
+*.la
+*.lai
+# ignore shared objects
+*.so
+# ignore swf
+*.swf
+*.air
+*.exe
+*.dmg
+*.mp3
+*.mp4
+*.m4a
+*.wav
+bin
+swfobject.js
+
