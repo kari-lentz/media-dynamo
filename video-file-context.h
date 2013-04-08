@@ -5,7 +5,7 @@
 
 using namespace std;
 
-class file_context:public decode_context
+class video_file_context:public decode_context
 {
 private:
     AVFormatContext* oc_;
@@ -15,8 +15,8 @@ private:
 
 public:
 
-    file_context(const char* mp4_file_path, ring_buffer_t* ring_buffer);
-    ~file_context();
+    video_file_context(const char* mp4_file_path, ring_buffer_t* ring_buffer);
+    ~video_file_context();
 
     void operator()(int start_at = 0);
 };

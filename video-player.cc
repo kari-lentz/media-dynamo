@@ -17,21 +17,21 @@ static const unsigned long STDIN_MAX = 1000000;
 #include <mysql++/mysql++.h>
 
 #include "env-writer.h"
-#include "file-context.h"
+#include "video-file-context.h"
 #include "display.h"
 #include "video-player.h"
 #include <SDL/SDL.h>
 
 using namespace std;
 
-static void* file_context_thread(void *parg)
+static void* video_file_context_thread(void *parg)
 {
     env_file_context* penv = (env_file_context*) parg;
 
     try
     {
-        file_context fc(penv->mp4_file_path, penv->ring_buffer);
-        fc();
+        video_file_context vfc(penv->mp4_file_path, penv->ring_buffer);
+        vfc();
         caux << "encode operation complete" << endl;
     }
     catch( app_fault& e )
@@ -66,7 +66,7 @@ int run_decode(const char* mp4_file_path)
 
     pthread_t thread_fc;
 
-    int ret = pthread_create( &thread_fc, NULL, &file_context_thread, &env );
+    int ret = pthread_create( &thread_fc, NULL, &video_file_context_thread, &env );
 
     try
     {
