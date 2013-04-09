@@ -5,7 +5,7 @@ FLAGS_MYSQL := -DMYSQLPP_MYSQL_HEADERS_BURIED
 #
 #define target, object, libraries
 #
-TARGET := ../video_player
+TARGET := ../bin/video-player
 OBJECTS := video-player.o decode-context.o video-file-context.o display.o  
 
 CC := g++
@@ -14,18 +14,18 @@ LIBS := -L../lib -lavdevice -lavfilter -lpostproc -lavformat -lavcodec -ldl -lXf
 
 CPPFLAGS =  -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -pthread -Wall -fPIC -Werror -g -Iinclude
 
-INC := app-fault.h ring-buffer.h ring-buffer-uint8.h null-stream.h env-writer.h
+INC := app-fault.h ring-buffer.h ring-buffer-video.h null-stream.h env-writer.h
 
 #
 # Link commands
 #
 $(TARGET) : $(OBJECTS) 
-	$(CC) -pthread -shared -fPIC $(OBJECTS) $(LIBS) -o $(TARGET)
+	$(CC) -pthread $(OBJECTS) $(LIBS) -o $(TARGET)
 
 #
 # Compile commands
 #
-video-player.o : video-player.cc video-player.h video-file-context.h decode-context.h $(INC)
+video-player.o : video-player.cc video-player.h video-file-context.h decode-context.h ffmpeg-headers.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o video-player.o $(FLAGS_MYSQL) video-player.cc
 
 decode-context.o : decode-context.cc decode-context.h decode-context.h $(INC)

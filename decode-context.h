@@ -1,19 +1,7 @@
 #ifndef ENCODE_CONTEXT_H
 #define ENCODE_CONTEXT_H
 
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-#include <libavutil/audioconvert.h>
-#include <libavutil/common.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/mathematics.h>
-#include <libavutil/samplefmt.h>
-#include <libavutil/opt.h>
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-#include <libavutil/pixfmt.h>
-}
+#include "ffmpeg-headers.h"
 
 #include <stdio.h>
 #include <string>
@@ -21,12 +9,10 @@ extern "C"
 #include <iostream>
 #include <exception>
 #include "app-fault.h"
-#include "ring-buffer-uint8.h"
+#include "ring-buffer-video.h"
 #include "logger.h"
 
 using namespace std;
-
-#define OUT_BUFFER_SIZE 16384
 
 typedef void* (*encode_context_thread_t)(void*);
 typedef int (*avcodec_decode_function_t) (AVCodecContext *avctx, AVFrame *picture, int *got_picture_ptr, const AVPacket *avpkt);
@@ -54,20 +40,18 @@ protected:
 
     int stream_idx_;
     ring_buffer_t* buffer_;
-    specific_streamer<decode_context, uint8_t> functor_;
+    specific_streamer<decode_context, AME_VIDEO_FRAME> functor_;
 
     AVFrame* frame_;
     size_t write_pos_;
     size_t max_pos_;
     int remaining_stream_bytes_;
-    bool eof_p_;
-    bool error_p_;
 
     AVFormatContext *format_context_;
 
-    int fill_buffer(uint8_t* buffer, int size);
+    void scale_frame(AME_VIDEO_FRAME* frame);
+    int decode_frames(AME_VIDEO_FRAME* frames, int size);
 
-    void decode_packet(AVFrame* frame, int *got_frame, AVPacket& pkt);
     void call(int start_at);
 
 public:

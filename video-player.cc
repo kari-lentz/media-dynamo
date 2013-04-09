@@ -55,7 +55,7 @@ static void* video_file_context_thread(void *parg)
 
 int run_decode(const char* mp4_file_path)
 {
-    ring_buffer_t ring_buffer(OUT_BUFFER_SIZE, 8);
+    ring_buffer_t ring_buffer(24,  6);
 
     env_file_context env;
 

@@ -12,7 +12,7 @@ logger_t display::logger("display");
 
 const char* COUNTS_MANAGER = "COUNTS-MANAGER";
 
-int display::call(unsigned char* pbuffer, int num_bytes)
+int display::call(AME_VIDEO_FRAME* pbuffer, int num_bytes)
 {
     int bytes = 0;
     return bytes;

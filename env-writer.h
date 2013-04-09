@@ -1,7 +1,7 @@
 #ifndef ENV_WRITER_H
 #define ENV_WRITER_H
 
-#include "ring-buffer-uint8.h"
+#include "ring-buffer-video.h"
 
 typedef struct
 {

@@ -58,30 +58,100 @@ void open_codec_context(int *stream_idx, AVFormatContext *fmt_ctx, enum AVMediaT
     }
 }
 
-int decode_context::fill_buffer(uint8_t* buffer, int size)
+void decode_context::scale_frame(AME_VIDEO_FRAME* frame)
 {
-    if( eof_p_ ) return 0;
-    if( error_p_ ) return -1;
-
     AVCodecContext* codec_context = get_codec_context();
 
     SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, codec_context->pix_fmt, codec_context->width, codec_context->height, PIX_FMT_YUYV422, SWS_BILINEAR, 0, 0, 0);
 
     if( !sws_context )
     {
-        error_p_ = true;
-        return -1;
+        stringstream ss;
+        ss << "failed to get scale context";
+        throw app_fault( ss.str().c_str() );
     }
 
     //Scale the raw data/convert it to our video buffer...
     //
     uint8_t* data[1];
-    data[0] = buffer;
+    data[0] = frame->data;
 
     sws_scale(sws_context, frame_->data, frame_->linesize, 0, codec_context->height, data, frame_->linesize);
     av_free( sws_context );
 
-    return codec_context->width * codec_context->height * 3;
+    frame->pts_ms = frame_->pts * (codec_context->time_base.num / codec_context->time_base.den);
+
+    for(int idx = 0; idx < 3; ++idx )
+    {
+        frame->linesize[ idx ] = frame_->linesize[ idx ];
+    }
+}
+
+int decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
+{
+    int frames_ctr = 0;
+
+    try
+    {
+        for( int frame_idx = 0; frame_idx < size; ++frame_idx )
+        {
+            int ret = 0;
+            int got_frame = 0;
+
+            AVPacket pkt;
+
+            av_init_packet(&pkt);
+            pkt.data = NULL;
+            pkt.size = 0;
+
+            /* read frames from the file */
+            if( av_read_frame(format_context_, &pkt) >= 0 )
+            {
+                AVCodecContext* codec_context = get_codec_context();
+
+                if( !codec_context )
+                {
+                    stringstream ss;
+                    ss << "expected initialized codec context and its not there!!!";
+                    throw app_fault( ss.str().c_str() );
+                }
+
+                if (pkt.stream_index == stream_idx_)
+                {
+                    /* decode video frame */
+                    ret = (*avcodec_decode_function_)(codec_context, frame_, &got_frame, &pkt);
+                    if (ret < 0)
+                    {
+                        stringstream ss;
+                        ss << "Error decoding video frame";
+                        throw app_fault( ss.str().c_str() );
+                    }
+                    else
+                    {
+                        ++frames_ctr;
+                    }
+
+                    av_free_packet(&pkt);
+
+                    if( got_frame )
+                    {
+                        scale_frame(&frames[ frame_idx ]);
+                    }
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+    catch( app_fault& e )
+    {
+        logger << e << endl;
+        return -1;
+    }
+
+    return frames_ctr;
 }
 
 AVCodecContext* decode_context::get_codec_context()
@@ -120,7 +190,7 @@ void decode_context::log_callback (void* ptr, int level, const char* fmt, va_lis
     va_end( ap_copy );
 }
 
-decode_context::decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, AVMediaType type, avcodec_decode_function_t avcodec_decode_function):mp4_file_path_(mp4_file_path), type_(type), avcodec_decode_function_(avcodec_decode_function), stream_idx_(-1), buffer_( ring_buffer ), functor_(this, &decode_context::fill_buffer), frame_(NULL),  write_pos_(0), max_pos_(0), remaining_stream_bytes_(0), eof_p_(false), error_p_(false)
+decode_context::decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, AVMediaType type, avcodec_decode_function_t avcodec_decode_function):mp4_file_path_(mp4_file_path), type_(type), avcodec_decode_function_(avcodec_decode_function), stream_idx_(-1), buffer_( ring_buffer ), functor_(this, &decode_context::decode_frames), frame_(NULL),  write_pos_(0), max_pos_(0), remaining_stream_bytes_(0)
 {
     av_log_set_callback( &decode_context::log_callback );
 }
@@ -153,45 +223,11 @@ decode_context::~decode_context()
     caux << "closing debug file if present" << endl;
 }
 
-
-void decode_context::decode_packet(AVFrame* frame, int *got_frame, AVPacket& pkt)
-{
-    int ret = 0;
-
-    AVCodecContext* codec_context = get_codec_context();
-
-    if( !codec_context )
-    {
-        stringstream ss;
-        ss << "expected initialized codec context and its not there!!!";
-        throw app_fault( ss.str().c_str() );
-    }
-
-    if (pkt.stream_index == stream_idx_)
-    {
-        /* decode video frame */
-        ret = (*avcodec_decode_function_)(codec_context, frame, got_frame, &pkt);
-        if (ret < 0)
-        {
-            stringstream ss;
-            ss << "Error decoding video frame";
-            throw app_fault( ss.str().c_str() );
-        }
-
-        if( got_frame )
-        {
-            buffer_->write_period( &functor_ );
-        }
-    }
-}
-
 void decode_context::call(int start_at)
 {
     max_pos_ = 0;
     write_pos_ = 0;
     remaining_stream_bytes_ = 0;
-    eof_p_ = false;
-    error_p_ = false;
 
     caux << "seek audio for:" << mp4_file_path_.c_str() << endl;
 
@@ -224,31 +260,11 @@ void decode_context::call(int start_at)
         }
     }
 
-    AVPacket pkt;
+    int ret;
 
-    av_init_packet(&pkt);
-    pkt.data = NULL;
-    pkt.size = 0;
-
-    int got_frame;
-
-    try
+    do
     {
-        /* read frames from the file */
-        while (av_read_frame(format_context_, &pkt) >= 0)
-        {
-            decode_packet(frame_, &got_frame, pkt);
-            av_free_packet(&pkt);
-        }
-        eof_p_ = true;
-        buffer_->write_period( &functor_ );
-    }
-    catch( app_fault& f )
-    {
-        logger << f << endl;
-        error_p_ = true;
-        buffer_->write_period( &functor_ );
-    }
-
+        ret = buffer_->write_period( &functor_ );
+    } while(ret > 0);
 }
 

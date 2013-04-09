@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "ring-buffer.h"
 #include "app-fault.h"
-#include "ring-buffer-uint8.h"
+#include "ring-buffer-video.h"
 #include "logger.h"
 
 using namespace std;
@@ -15,9 +15,9 @@ class display
 private:
 
     ring_buffer_t* pbuffer_;
-    specific_streamer<display, uint8_t> functor_;
+    specific_streamer<display, AME_VIDEO_FRAME> functor_;
 
-    int call(uint8_t* pbuffer, int num_bytes);
+    int call(AME_VIDEO_FRAME* pbuffer, int num_bytes);
 
 public:
 
