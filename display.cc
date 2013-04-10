@@ -88,9 +88,7 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
         rect.h = pframe_playable->height;
 
         SDL_DisplayYUVOverlay(overlay_, &rect);
-        int delay = 20;
-        usleep( delay * 1000 );
-        media_ms_ += delay;
+        media_ms_ = pframe_playable->pts_ms;
     }
 
     int ret = 0;
@@ -139,6 +137,11 @@ int display::operator()()
     do
     {
         ret = pbuffer_->read_avail( &functor_ );
+
+        int delay = 20;
+        usleep( delay * 1000 );
+        media_ms_ = media_ms_ + delay;
+
     }  while( ret >= 0);
 
     return ret;
