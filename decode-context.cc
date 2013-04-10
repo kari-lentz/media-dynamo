@@ -62,7 +62,7 @@ void decode_context::scale_frame(AME_VIDEO_FRAME* frame)
 {
     AVCodecContext* codec_context = get_codec_context();
 
-    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, codec_context->pix_fmt, codec_context->width, codec_context->height, PIX_FMT_YUYV422, SWS_BILINEAR, 0, 0, 0);
+    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, codec_context->pix_fmt, codec_context->width, codec_context->height, PIX_FMT_YUV422P, SWS_BILINEAR, 0, 0, 0);
 
     if( !sws_context )
     {
@@ -73,27 +73,42 @@ void decode_context::scale_frame(AME_VIDEO_FRAME* frame)
 
     //Scale the raw data/convert it to our video buffer...
     //
-    uint8_t* data[1];
-    data[0] = frame->data;
-
-    sws_scale(sws_context, frame_->data, frame_->linesize, 0, codec_context->height, data, frame_->linesize);
-    av_free( sws_context );
-
-    frame->pts_ms = frame_->pts * (codec_context->time_base.num / codec_context->time_base.den);
+    frame->data[0] = frame->y_data;
+    frame->data[1] = frame->u_data;
+    frame->data[2] = frame->v_data;
 
     for(int idx = 0; idx < 3; ++idx )
     {
         frame->linesize[ idx ] = frame_->linesize[ idx ];
     }
+
+    sws_scale(sws_context, frame_->data, frame_->linesize, 0, codec_context->height, frame->data, frame->linesize);
+    av_free( sws_context );
+
+    frame->pts_ms = av_frame_get_best_effort_timestamp(frame_) * av_q2d(codec_context->time_base);
+
+    frame_->width = codec_context->width;
+    frame_->height = codec_context->height;
+    frame->played_p = false;
+    frame->skipped_p = false;
 }
 
 int decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
 {
-    int frames_ctr = 0;
+    int frame_ctr = 0;
 
     try
     {
-        for( int frame_idx = 0; frame_idx < size; ++frame_idx )
+        AVCodecContext* codec_context = get_codec_context();
+
+        if( !codec_context )
+        {
+            stringstream ss;
+            ss << "expected initialized codec context and its not there!!!";
+            throw app_fault( ss.str().c_str() );
+        }
+
+        while( frame_ctr < size )
         {
             int ret = 0;
             int got_frame = 0;
@@ -107,15 +122,6 @@ int decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
             /* read frames from the file */
             if( av_read_frame(format_context_, &pkt) >= 0 )
             {
-                AVCodecContext* codec_context = get_codec_context();
-
-                if( !codec_context )
-                {
-                    stringstream ss;
-                    ss << "expected initialized codec context and its not there!!!";
-                    throw app_fault( ss.str().c_str() );
-                }
-
                 if (pkt.stream_index == stream_idx_)
                 {
                     /* decode video frame */
@@ -126,16 +132,11 @@ int decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
                         ss << "Error decoding video frame";
                         throw app_fault( ss.str().c_str() );
                     }
-                    else
-                    {
-                        ++frames_ctr;
-                    }
-
-                    av_free_packet(&pkt);
 
                     if( got_frame )
                     {
-                        scale_frame(&frames[ frame_idx ]);
+                        scale_frame(&frames[ frame_ctr ]);
+                        ++frame_ctr;
                     }
                 }
             }
@@ -143,6 +144,8 @@ int decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
             {
                 break;
             }
+
+            av_free_packet(&pkt);
         }
     }
     catch( app_fault& e )
@@ -151,7 +154,7 @@ int decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
         return -1;
     }
 
-    return frames_ctr;
+    return frame_ctr;
 }
 
 AVCodecContext* decode_context::get_codec_context()

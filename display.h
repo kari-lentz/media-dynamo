@@ -7,6 +7,7 @@
 #include "app-fault.h"
 #include "ring-buffer-video.h"
 #include "logger.h"
+#include <SDL/SDL.h>
 
 using namespace std;
 
@@ -14,9 +15,13 @@ class display
 {
 private:
 
+    int media_ms_;
     ring_buffer_t* pbuffer_;
     specific_streamer<display, AME_VIDEO_FRAME> functor_;
+    SDL_Surface* screen_;
+    SDL_Overlay* overlay_;
 
+    int display_frame(AME_VIDEO_FRAME* pframes, int num_frames);
     int call(AME_VIDEO_FRAME* pbuffer, int num_bytes);
 
 public:
