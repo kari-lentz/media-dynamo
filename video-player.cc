@@ -26,7 +26,7 @@ using namespace std;
 
 void initialize_SDL(int width, int height, SDL_Surface** ppsurface, SDL_Overlay** ppoverlay)
 {
-    *ppsurface = SDL_SetVideoMode(width, height, 0, 0);
+    *ppsurface = SDL_SetVideoMode(width, height, 0, SDL_HWSURFACE | SDL_RESIZABLE | SDL_ASYNCBLIT | SDL_HWACCEL);
     if(!*ppsurface)
     {
         stringstream ss;
@@ -42,6 +42,10 @@ void initialize_SDL(int width, int height, SDL_Surface** ppsurface, SDL_Overlay*
         ss << "SDL: could not create YUV overlay";
         throw app_fault( ss.str().c_str() );
     }
+}
+
+void terminate_SDL(SDL_Surface** ppsurface, SDL_Overlay** ppoverlay)
+{
 }
 
 static void* video_file_context_thread(void *parg)
@@ -89,6 +93,7 @@ int run_decode(const char* mp4_file_path)
     {
         SDL_Surface* surface;
         initialize_SDL(854, 480, &surface, &env.overlay);
+        //initialize_SDL(1920, 1080, &surface, &env.overlay);
     }
     catch(app_fault& e)
     {

@@ -51,9 +51,9 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
     {
         SDL_LockYUVOverlay( overlay_ );
 
-        overlay_->pixels[ 0 ] = pframe_playable->data[ 0 ];
-        overlay_->pixels[ 1 ] = pframe_playable->data[ 2 ];
-        overlay_->pixels[ 2 ] = pframe_playable->data[ 1 ];
+        memcpy(overlay_->pixels[ 0 ], pframe_playable->data[ 0 ], overlay_->pitches[0] * overlay_->h);
+        memcpy(overlay_->pixels[ 2 ], pframe_playable->data[ 1 ], (overlay_->pitches[2] * overlay_->h) >> 1);
+        memcpy(overlay_->pixels[ 1 ], pframe_playable->data[ 2 ], (overlay_->pitches[1] * overlay_->h) >> 1);
 
         pframe_playable->played_p = true;
 
@@ -63,8 +63,8 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
 
         rect.x = 0;
         rect.y = 0;
-        rect.w = pframe_playable->width;
-        rect.h = pframe_playable->height;
+        rect.w = overlay_->w;
+        rect.h = overlay_->h;
 
         int ret = SDL_DisplayYUVOverlay(overlay_, &rect);
 
@@ -77,7 +77,7 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
 
         media_ms_ = pframe_playable->pts_ms;
 
-        caux << "played frame as media ms:" << media_ms_ << ":pitch:" << overlay_->pitches[0] << ":num_frames:" << num_frames << endl;
+        //caux << "played frame as media ms:" << media_ms_ << ":pitch:" << overlay_->pitches[0] << ":num_frames:" << num_frames << endl;
     }
 
     int ret = 0;
@@ -98,7 +98,7 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
         }
     }
 
-    caux << "processed " << ret << " frames" << endl;
+    //caux << "processed " << ret << " frames" << endl;
 
     return ret;
 }

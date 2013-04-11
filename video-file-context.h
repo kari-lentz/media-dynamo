@@ -18,6 +18,7 @@ private:
     FILE* outfile_;
 
     void scale_frame(AME_VIDEO_FRAME* frame);
+    void scale_frame2(AME_VIDEO_FRAME* frame);
     int decode_frames(AME_VIDEO_FRAME* frames, int size);
 
 public:

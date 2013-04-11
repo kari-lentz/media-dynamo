@@ -17,13 +17,40 @@
 
 using namespace std;
 
+void video_file_context::scale_frame2(AME_VIDEO_FRAME* frame)
+{
+    AVCodecContext* codec_context = get_codec_context();
+
+    AVPicture pict = {{0}};
+
+    frame->data[0] = frame->y_data;
+    frame->data[1] = frame->u_data;
+    frame->data[2] = frame->v_data;
+
+    pict.data[0] = frame->data[0];
+    pict.data[1] = frame->data[1];
+    pict.data[2] = frame->data[2];
+
+    pict.linesize[0] = overlay_->pitches[0];
+    pict.linesize[1] = overlay_->pitches[2];
+    pict.linesize[2] = overlay_->pitches[1];
+
+    // FIXME use direct rendering
+    av_picture_copy(&pict, (AVPicture *)frame_, PIX_FMT_YUV420P, overlay_->w, overlay_->h);
+
+    frame->pts_ms = av_frame_get_best_effort_timestamp(frame_) * av_q2d(codec_context->time_base);
+
+    frame->width = codec_context->width;
+    frame->height = codec_context->height;
+    frame->played_p = false;
+    frame->skipped_p = false;
+}
+
 void video_file_context::scale_frame(AME_VIDEO_FRAME* frame)
 {
     AVCodecContext* codec_context = get_codec_context();
 
-//    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, codec_context->pix_fmt, codec_context->width, codec_context->height, PIX_FMT_YUV420P, SWS_BILINEAR, 0, 0, 0);
-
-    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, (PixelFormat) frame_->format, codec_context->width, codec_context->height, PIX_FMT_YUV420P, SWS_BILINEAR, 0, 0, 0);
+    SwsContext*  sws_context = sws_getContext(frame_->width, frame_->height, (PixelFormat) frame_->format, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
 
     if( !sws_context )
     {
@@ -39,10 +66,10 @@ void video_file_context::scale_frame(AME_VIDEO_FRAME* frame)
     frame->data[2] = frame->v_data;
 
     frame->linesize[ 0 ] = overlay_->pitches[ 0 ];
-    frame->linesize[ 1 ] = overlay_->pitches[ 2 ];
     frame->linesize[ 2 ] = overlay_->pitches[ 1 ];
+    frame->linesize[ 1 ] = overlay_->pitches[ 2 ];
 
-    sws_scale(sws_context, frame_->data, frame_->linesize, 0, codec_context->height, frame->data, frame->linesize);
+    sws_scale(sws_context, frame_->data, frame_->linesize, 0, frame_->height, frame->data, frame->linesize);
     av_free( sws_context );
 
     frame->pts_ms = av_frame_get_best_effort_timestamp(frame_) * av_q2d(codec_context->time_base);
@@ -52,7 +79,7 @@ void video_file_context::scale_frame(AME_VIDEO_FRAME* frame)
     frame->played_p = false;
     frame->skipped_p = false;
 
-    //caux << "decode frame:pts_ms:" << frame->pts_ms << ":"  << codec_context->height << endl;
+    //caux << "decode frame:pts_ms:" << frame->pts_ms << ":"  << final_height << endl;
 }
 
 int video_file_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
