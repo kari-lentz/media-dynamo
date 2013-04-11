@@ -23,7 +23,7 @@ void video_file_context::scale_frame(AME_VIDEO_FRAME* frame)
 
 //    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, codec_context->pix_fmt, codec_context->width, codec_context->height, PIX_FMT_YUV420P, SWS_BILINEAR, 0, 0, 0);
 
-    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, (AVPixelFormat) frame_->format, codec_context->width, codec_context->height, PIX_FMT_YUV420P, SWS_BILINEAR, 0, 0, 0);
+    SwsContext*  sws_context = sws_getContext(codec_context->width, codec_context->height, (PixelFormat) frame_->format, codec_context->width, codec_context->height, PIX_FMT_YUV420P, SWS_BILINEAR, 0, 0, 0);
 
     if( !sws_context )
     {
