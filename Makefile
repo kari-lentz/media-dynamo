@@ -10,9 +10,19 @@ OBJECTS := video-player.o decode-context.o video-file-context.o display.o
 
 CC := g++
 
-LIBS := -L../lib -lavdevice -lavfilter -lpostproc -lavformat -lavcodec -ldl -lXfixes -lXext -lX11 -lasound -lSDL -lx264 -lvpx -lvorbisenc -lvorbis -ltheoraenc -ltheoradec -logg -lopencore-amrwb -lopencore-amrnb -lmp3lame -lfaac -lz -lrt -lswresample -lswscale -lavutil -lm -lmysqlpp -pthread 
+LIBS= 	libavdevice                        \
+	libavformat                        \
+	libavfilter                        \
+	libavcodec                         \
+	libswresample                      \
+	libswscale                         \
+	libavutil                          \
 
-CPPFLAGS =  -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -pthread -Wall -fPIC -Werror -g -Iinclude
+LIBS2 := -pthread -L/usr/local/lib -lavdevice -lavfilter -lpostproc -lavformat -lavcodec -ldl -lXfixes -lXext -lX11 -lasound -lSDL -lx264 -lvpx -lvorbisenc -lvorbis -ltheoraenc -ltheoradec -logg -lopencore-amrwb -lopencore-amrnb -lmp3lame -lfaac -lz -lrt -lswresample -lswscale -lavutil -lm -lmysqlpp  
+
+LDLIBS := $(shell pkg-config --libs $(LIBS)) $(LDLIBS)
+
+CPPFLAGS =  -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -pthread -Wall -Werror -g -Iinclude
 
 INC := app-fault.h ring-buffer.h ring-buffer-video.h null-stream.h env-writer.h
 
@@ -20,7 +30,7 @@ INC := app-fault.h ring-buffer.h ring-buffer-video.h null-stream.h env-writer.h
 # Link commands
 #
 $(TARGET) : $(OBJECTS) 
-	$(CC) -pthread $(OBJECTS) $(LIBS) -o $(TARGET)
+	$(CC) -pthread $(OBJECTS) $(LDLIBS) -o $(TARGET)
 
 #
 # Compile commands
