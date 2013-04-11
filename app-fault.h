@@ -8,13 +8,13 @@
 
 using namespace std;
 
-//#define _THD_DEBUG
+#define _THD_DEBUG
 
 #ifndef _THD_DEBUG
 #define caux my_null_stream
 //#define caux cerr
 #else
-#define caux log_error
+#define caux decode_context::logger
 #endif
 
 class app_fault

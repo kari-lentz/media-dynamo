@@ -1,23 +1,31 @@
+#ifdef __cplusplus
+#define __STDC_CONSTANT_MACROS
+#ifdef _STDINT_H
+#undef _STDINT_H
+#endif
+# include <stdint.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <string>
 #include <iostream>
 #include <sstream>
+
 #include "display.h"
+#include "decode-context.h"
 
 using namespace std;
 
-logger_t display::logger("display");
-
-const char* COUNTS_MANAGER = "COUNTS-MANAGER";
+logger_t display::logger("VIDEO-PLAYER");
 
 int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
 {
     //find the lowest acceptable pts and play that
     //
     int lowest_ms = 60000 * 1440;
-    AME_VIDEO_FRAME* pframe_playable;
+    AME_VIDEO_FRAME* pframe_playable = NULL;
 
     for( int idx = 0; idx < num_frames; ++idx )
     {
@@ -41,40 +49,11 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
     //
     if( pframe_playable )
     {
-        //ensure overlays and surfaces created
-        //
-        if( !screen_ )
-        {
-            screen_ = SDL_SetVideoMode(pframe_playable->width, pframe_playable->height, 0, 0);
-            if(!screen_)
-            {
-                stringstream ss;
-                ss << "SDL: could not set video mode - exiting";
-                throw app_fault( ss.str().c_str() );
-            }
-        }
-
-        if( !overlay_ )
-        {
-            overlay_ = SDL_CreateYUVOverlay(pframe_playable->width, pframe_playable->height, SDL_YV12_OVERLAY, screen_);
-
-            if( !overlay_ )
-            {
-                stringstream ss;
-                ss << "SDL: could not create UYV overlay";
-                throw app_fault( ss.str().c_str() );
-            }
-        }
-
         SDL_LockYUVOverlay( overlay_ );
 
-        overlay_->pitches[ 0 ] = pframe_playable->linesize[0];
-        overlay_->pitches[ 1 ] = pframe_playable->linesize[2];
-        overlay_->pitches[ 2 ] = pframe_playable->linesize[1];
-
-        overlay_->pixels[ 0 ] = pframe_playable->data[0];
-        overlay_->pixels[ 1 ] = pframe_playable->data[2];
-        overlay_->pixels[ 2 ] = pframe_playable->data[1];
+        overlay_->pixels[ 0 ] = pframe_playable->data[ 0 ];
+        overlay_->pixels[ 1 ] = pframe_playable->data[ 2 ];
+        overlay_->pixels[ 2 ] = pframe_playable->data[ 1 ];
 
         pframe_playable->played_p = true;
 
@@ -87,8 +66,18 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
         rect.w = pframe_playable->width;
         rect.h = pframe_playable->height;
 
-        SDL_DisplayYUVOverlay(overlay_, &rect);
+        int ret = SDL_DisplayYUVOverlay(overlay_, &rect);
+
+        if( ret != 0 )
+        {
+            stringstream ss;
+            ss << "SDL: could not display YUV overlay";
+            throw app_fault( ss.str().c_str() );
+        }
+
         media_ms_ = pframe_playable->pts_ms;
+
+        caux << "played frame as media ms:" << media_ms_ << ":pitch:" << overlay_->pitches[0] << ":num_frames:" << num_frames << endl;
     }
 
     int ret = 0;
@@ -103,7 +92,13 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
         {
             ++ret;
         }
+        else
+        {
+            break;
+        }
     }
+
+    caux << "processed " << ret << " frames" << endl;
 
     return ret;
 }
@@ -121,7 +116,7 @@ int display::call(AME_VIDEO_FRAME* pframes, int num_frames)
     }
 }
 
-display::display(ring_buffer_t* pbuffer):media_ms_(0), pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(NULL)
+display::display(ring_buffer_t* pbuffer, SDL_Overlay* overlay):media_ms_(0), pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(overlay)
 {
 }
 

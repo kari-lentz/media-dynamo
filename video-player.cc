@@ -15,14 +15,34 @@ static const unsigned long STDIN_MAX = 1000000;
 #include <sstream>
 #include <map>
 #include <mysql++/mysql++.h>
+#include <SDL/SDL.h>
 
 #include "env-writer.h"
 #include "video-file-context.h"
 #include "display.h"
 #include "video-player.h"
-#include <SDL/SDL.h>
 
 using namespace std;
+
+void initialize_SDL(int width, int height, SDL_Surface** ppsurface, SDL_Overlay** ppoverlay)
+{
+    *ppsurface = SDL_SetVideoMode(width, height, 0, 0);
+    if(!*ppsurface)
+    {
+        stringstream ss;
+        ss << "SDL: could not set video mode - exiting";
+        throw app_fault( ss.str().c_str() );
+    }
+
+    *ppoverlay = SDL_CreateYUVOverlay(width, height, SDL_YV12_OVERLAY, *ppsurface);
+
+    if( !ppoverlay )
+    {
+        stringstream ss;
+        ss << "SDL: could not create YUV overlay";
+        throw app_fault( ss.str().c_str() );
+    }
+}
 
 static void* video_file_context_thread(void *parg)
 {
@@ -30,7 +50,7 @@ static void* video_file_context_thread(void *parg)
 
     try
     {
-        video_file_context vfc(penv->mp4_file_path, penv->ring_buffer);
+        video_file_context vfc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
         vfc();
         caux << "encode operation complete" << endl;
     }
@@ -56,20 +76,30 @@ static void* video_file_context_thread(void *parg)
 int run_decode(const char* mp4_file_path)
 {
     ring_buffer_t ring_buffer(24,  6);
-
     env_file_context env;
+    int ret;
+    pthread_t thread_fc;
 
     env.mp4_file_path = mp4_file_path;
     env.start_at = 0;
     env.ring_buffer = &ring_buffer;
     env.ret = 0;
 
-    pthread_t thread_fc;
-
-    int ret = pthread_create( &thread_fc, NULL, &video_file_context_thread, &env );
+    try
+    {
+        SDL_Surface* surface;
+        initialize_SDL(854, 480, &surface, &env.overlay);
+    }
+    catch(app_fault& e)
+    {
+        display::logger << "caught exception:" << e << endl;
+        return -1;
+    }
 
     try
     {
+        int ret = pthread_create( &thread_fc, NULL, &video_file_context_thread, &env );
+
         if( ret < 0 )
         {
             stringstream ss;
@@ -77,7 +107,7 @@ int run_decode(const char* mp4_file_path)
             throw app_fault( ss.str().c_str() );
         }
 
-        display d(&ring_buffer);
+        display d(&ring_buffer, env.overlay);
         ret = d();
 
         display::logger << "will wait for encode thread completion:last ret:" << ret << endl;
@@ -106,7 +136,7 @@ int run_decode(const char* mp4_file_path)
 
 int main(int argc, char *argv[])
 {
-  av_register_all();
+   av_register_all();
 
   if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER))
   {
@@ -114,5 +144,5 @@ int main(int argc, char *argv[])
       exit(1);
   }
 
-  run_decode( "/mnt/MUSIC/10003418.hd.mp4" );
+  return run_decode( "/mnt/MUSIC/test.hd.mp4" );
 }

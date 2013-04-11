@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <exception>
+#include <SDL/SDL.h>
 #include "app-fault.h"
 #include "ring-buffer-video.h"
 #include "logger.h"
@@ -22,6 +23,7 @@ typedef struct
     const char* mp4_file_path;
     int start_at;
     ring_buffer_t* ring_buffer;
+    SDL_Overlay* overlay;
     bool debug_p;
     int ret;
 } env_file_context;
@@ -39,8 +41,6 @@ protected:
     avcodec_decode_function_t avcodec_decode_function_;
 
     int stream_idx_;
-    ring_buffer_t* buffer_;
-    specific_streamer<decode_context, AME_VIDEO_FRAME> functor_;
 
     AVFrame* frame_;
     size_t write_pos_;
@@ -49,10 +49,7 @@ protected:
 
     AVFormatContext *format_context_;
 
-    void scale_frame(AME_VIDEO_FRAME* frame);
-    int decode_frames(AME_VIDEO_FRAME* frames, int size);
-
-    void call(int start_at);
+    void start_stream(int start_at = 0);
 
 public:
 
@@ -62,10 +59,8 @@ public:
 
     // handle various input formats
     //
-    decode_context(const char* mp4_file_path, ring_buffer_t* buffer, AVMediaType type, avcodec_decode_function_t avcodec_decode_function);
+    decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_function_t avcodec_decode_function);
     virtual ~decode_context();
-
-    void operator()(int start_at = 0);
 };
 
 #endif

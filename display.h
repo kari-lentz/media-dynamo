@@ -28,7 +28,7 @@ public:
 
     static logger_t logger;
 
-    display(ring_buffer_t* pbuffer);
+    display(ring_buffer_t* pbuffer, SDL_Overlay* overlay);
     ~display();
 
     int operator()();
