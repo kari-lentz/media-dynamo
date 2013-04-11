@@ -56,7 +56,7 @@ static void* video_file_context_thread(void *parg)
     {
         video_file_context vfc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
         vfc();
-        caux << "encode operation complete" << endl;
+        caux << "decode operation complete" << endl;
     }
     catch( app_fault& e )
     {

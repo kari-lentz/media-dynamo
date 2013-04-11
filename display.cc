@@ -137,7 +137,7 @@ int display::operator()()
         usleep( delay * 1000 );
         media_ms_ = media_ms_ + delay;
 
-    }  while( ret >= 0);
+    }  while( ret > 0);
 
     return ret;
 }

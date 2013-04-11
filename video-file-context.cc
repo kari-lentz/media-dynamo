@@ -133,6 +133,7 @@ int video_file_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
             }
             else
             {
+                caux << "hit eof:" << frame_ctr << endl;
                 break;
             }
 

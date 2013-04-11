@@ -108,9 +108,11 @@ decode_context::~decode_context()
 
     if( frame_ )
     {
-        av_freep( frame_ );
+        av_free( frame_ );
         frame_ = NULL;
     }
+
+    caux << "freed frame" << endl;
 
     if( format_context_ )
     {
@@ -122,6 +124,8 @@ decode_context::~decode_context()
             c = format_context_->streams[0]->codec;
 	    if( c ) avcodec_close( c );
         }
+
+        caux << "closed codec" << endl;
 
         /* free the entire format*/
         avformat_free_context(format_context_);
