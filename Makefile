@@ -10,15 +10,7 @@ OBJECTS := video-player.o decode-context.o video-file-context.o display.o
 
 CC := g++
 
-LIBS= 	libavdevice                        \
-	libavformat                        \
-	libavfilter                        \
-	libavcodec                         \
-	libswresample                      \
-	libswscale                         \
-	libavutil                          \
-
-LIBS2 := -pthread -L/usr/local/lib -lavdevice -lavfilter -lpostproc -lavformat -lavcodec -ldl -lXfixes -lXext -lX11 -lasound -lSDL -lx264 -lvpx -lvorbisenc -lvorbis -ltheoraenc -ltheoradec -logg -lopencore-amrwb -lopencore-amrnb -lmp3lame -lfaac -lz -lrt -lswresample -lswscale -lavutil -lm -lmysqlpp  
+LIBS := libavdevice libavformat libavfilter libavcodec libswresample libswscale libavutil sdl		
 
 LDLIBS := $(shell pkg-config --libs $(LIBS)) $(LDLIBS)
 
