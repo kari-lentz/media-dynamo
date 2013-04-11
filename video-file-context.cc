@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "video-file-context.h"
+#include "sdl-holder.h"
 
 using namespace std;
 
@@ -168,7 +169,7 @@ void video_file_context::operator()(int start_at)
         do
         {
             ret = buffer_->write_period( &functor_ );
-        } while(ret > 0);
+        } while(ret > 0 && !sdl_holder::done);
     }
     catch(app_fault& e)
     {

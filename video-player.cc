@@ -21,42 +21,24 @@ static const unsigned long STDIN_MAX = 1000000;
 #include "video-file-context.h"
 #include "display.h"
 #include "video-player.h"
+#include "sdl-holder.h"
+
+#define USER_QUIT (SDL_USEREVENT + 0)
 
 using namespace std;
 
-void initialize_SDL(int width, int height, SDL_Surface** ppsurface, SDL_Overlay** ppoverlay)
-{
-    *ppsurface = SDL_SetVideoMode(width, height, 0, SDL_HWSURFACE | SDL_RESIZABLE | SDL_ASYNCBLIT | SDL_HWACCEL);
-    if(!*ppsurface)
-    {
-        stringstream ss;
-        ss << "SDL: could not set video mode - exiting";
-        throw app_fault( ss.str().c_str() );
-    }
-
-    *ppoverlay = SDL_CreateYUVOverlay(width, height, SDL_YV12_OVERLAY, *ppsurface);
-
-    if( !ppoverlay )
-    {
-        stringstream ss;
-        ss << "SDL: could not create YUV overlay";
-        throw app_fault( ss.str().c_str() );
-    }
-}
-
-void terminate_SDL(SDL_Surface** ppsurface, SDL_Overlay** ppoverlay)
-{
-}
+logger_t logger("VIDEO-DISPLAY");
 
 static void* video_file_context_thread(void *parg)
 {
-    env_file_context* penv = (env_file_context*) parg;
+    env_video_file_context* penv = (env_video_file_context*) parg;
 
     try
     {
         video_file_context vfc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
         vfc();
         caux << "decode operation complete" << endl;
+        penv->ret = 0;
     }
     catch( app_fault& e )
     {
@@ -77,49 +59,89 @@ static void* video_file_context_thread(void *parg)
     return &penv->ret;
 }
 
+static void* display_thread(void *parg)
+{
+    env_display_context* penv = (env_display_context*) parg;
+
+    try
+    {
+        display d(penv->ring_buffer, penv->overlay);
+        d();
+        caux << "display complete" << endl;
+        penv->ret = 0;
+    }
+    catch( app_fault& e )
+    {
+        penv->ret = -1;
+        decode_context::logger << "caught exception:" << e << endl;
+    }
+    catch (const std::ios_base::failure& e)
+    {
+        penv->ret = -1;
+        decode_context::logger << "Exception opening/reading file" << endl;
+    }
+    catch (exception& e)
+    {
+        penv->ret = -1;
+        decode_context::logger << "Exception opening/reading file" << endl;
+    }
+
+    return &penv->ret;
+}
+
+void do_exit(pthread_t thread_display, pthread_t thread_fc)
+{
+    sdl_holder::done = (lock_t<bool>) true;
+
+    pthread_join( thread_display, NULL );
+    pthread_join( thread_fc, NULL );
+    display::logger << "all secondary threads down" << endl;
+}
+
 int run_decode(const char* mp4_file_path)
 {
     ring_buffer_t ring_buffer(24,  6);
-    env_file_context env;
-    int ret;
-    pthread_t thread_fc;
-
-    env.mp4_file_path = mp4_file_path;
-    env.start_at = 0;
-    env.ring_buffer = &ring_buffer;
-    env.ret = 0;
+    env_video_file_context env_fc;
+    env_display_context env_display;
+    int ret = 0;
+    pthread_t thread_fc, thread_display;
 
     try
     {
-        SDL_Surface* surface;
-        initialize_SDL(854, 480, &surface, &env.overlay);
-        //initialize_SDL(1920, 1080, &surface, &env.overlay);
-    }
-    catch(app_fault& e)
-    {
-        display::logger << "caught exception:" << e << endl;
-        return -1;
-    }
+        sdl_holder sdl(854, 480, &thread_fc, &thread_display);
 
-    try
-    {
-        int ret = pthread_create( &thread_fc, NULL, &video_file_context_thread, &env );
+        env_fc.mp4_file_path = mp4_file_path;
+        env_fc.overlay = sdl.get_overlay();
+        env_fc.start_at = 0;
+        env_fc.ring_buffer = &ring_buffer;
+        env_fc.ret = 0;
+
+        int ret = pthread_create( &thread_fc, NULL, &video_file_context_thread, &env_fc );
 
         if( ret < 0 )
         {
             stringstream ss;
-            ss << "writer thread create error:"  << strerror( ret );
+            ss << "file thread create error:"  << strerror( ret );
             throw app_fault( ss.str().c_str() );
         }
 
-        display d(&ring_buffer, env.overlay);
-        ret = d();
+        env_display.ring_buffer = &ring_buffer;
+        env_display.overlay = sdl.get_overlay();
 
-        display::logger << "will wait for encode thread completion:last ret:" << ret << endl;
+        ret = pthread_create( &thread_display, NULL, &display_thread, &env_display );
+
+        if( ret < 0 )
+        {
+            stringstream ss;
+            ss << "display thread create error:"  << strerror( ret );
+            throw app_fault( ss.str().c_str() );
+        }
+
+        sdl.message_loop();
     }
     catch(app_fault& e)
     {
-        display::logger << "caught exception:" << e << endl;
+        sdl_holder::logger << "caught exception:" << e << endl;
         ret = -1;
     }
     catch (const std::ios_base::failure& e)
@@ -132,9 +154,6 @@ int run_decode(const char* mp4_file_path)
         display::logger << "Exception opening/reading file";
         ret = -1;
     }
-
-    pthread_join( thread_fc, NULL );
-    display::logger << "request was processed" << endl;
 
     return ret;
 }
@@ -149,5 +168,11 @@ int main(int argc, char *argv[])
       exit(1);
   }
 
-  return run_decode( "/mnt/MUSIC/test.hd.mp4" );
+  int ret = run_decode( "/mnt/MUSIC/test.hd.mp4" );
+
+  SDL_Quit();
+
+  sdl_holder::logger << "final bye" << endl;
+
+  return ret;
 }

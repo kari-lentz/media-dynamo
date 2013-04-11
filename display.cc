@@ -15,10 +15,12 @@
 
 #include "display.h"
 #include "decode-context.h"
+#include "sdl-holder.h"
 
 using namespace std;
 
 logger_t display::logger("VIDEO-PLAYER");
+extern lock_t<bool> global_done;
 
 int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
 {
@@ -122,6 +124,7 @@ display::display(ring_buffer_t* pbuffer, SDL_Overlay* overlay):media_ms_(0), pbu
 
 display::~display()
 {
+    display::logger << "display destroyed" << endl;
 }
 
 int display::operator()()
@@ -137,7 +140,7 @@ int display::operator()()
         usleep( delay * 1000 );
         media_ms_ = media_ms_ + delay;
 
-    }  while( ret > 0);
+    }  while( ret > 0 && !sdl_holder::done);
 
     return ret;
 }

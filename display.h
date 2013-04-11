@@ -11,6 +11,14 @@
 
 using namespace std;
 
+typedef struct
+{
+    ring_buffer_t* ring_buffer;
+    SDL_Overlay* overlay;
+    bool debug_p;
+    int ret;
+} env_display_context;
+
 class display
 {
 private:

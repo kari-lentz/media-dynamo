@@ -26,7 +26,7 @@ typedef struct
     SDL_Overlay* overlay;
     bool debug_p;
     int ret;
-} env_file_context;
+} env_video_file_context;
 
 class decode_context
 {

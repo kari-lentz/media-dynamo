@@ -131,7 +131,7 @@ decode_context::~decode_context()
         avformat_free_context(format_context_);
     }
 
-    caux << "closing debug file if present" << endl;
+    caux << "decoder destroyed" << endl;
 }
 
 void decode_context::start_stream(int start_at)
