@@ -1,5 +1,5 @@
-#ifndef ENCODE_CONTEXT_H
-#define ENCODE_CONTEXT_H
+#ifndef DECODE_CONTEXT_H
+#define DECODE_CONTEXT_H
 
 #include "ffmpeg-headers.h"
 
@@ -17,16 +17,6 @@ using namespace std;
 
 typedef void* (*encode_context_thread_t)(void*);
 typedef int (*avcodec_decode_function_t) (AVCodecContext *avctx, AVFrame *picture, int *got_picture_ptr, const AVPacket *avpkt);
-
-typedef struct
-{
-    const char* mp4_file_path;
-    int start_at;
-    ring_buffer_t* ring_buffer;
-    SDL_Overlay* overlay;
-    bool debug_p;
-    int ret;
-} env_video_file_context;
 
 class decode_context
 {

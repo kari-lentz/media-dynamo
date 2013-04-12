@@ -6,7 +6,7 @@ FLAGS_MYSQL := -DMYSQLPP_MYSQL_HEADERS_BURIED
 #define target, object, libraries
 #
 TARGET := ../bin/video-player
-OBJECTS := video-player.o sdl-holder.o decode-context.o video-file-context.o display.o  
+OBJECTS := video-player.o sdl-holder.o decode-context.o video-decode-context.o display.o  
 
 CC := g++
 
@@ -27,7 +27,7 @@ $(TARGET) : $(OBJECTS)
 #
 # Compile commands
 #
-video-player.o : video-player.cc thread-lock.h video-player.h video-file-context.h decode-context.h ffmpeg-headers.h $(INC)
+video-player.o : video-player.cc thread-lock.h video-player.h video-decode-context.h decode-context.h ffmpeg-headers.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o video-player.o $(FLAGS_MYSQL) video-player.cc
 
 sdl-holder.o : sdl-holder.cc sdl-holder.h
@@ -36,8 +36,8 @@ sdl-holder.o : sdl-holder.cc sdl-holder.h
 decode-context.o : decode-context.cc decode-context.h decode-context.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o decode-context.o decode-context.cc
 
-video-file-context.o : video-file-context.cc video-file-context.h decode-context.h $(INC)
-	$(CC) $(CPPFLAGS) -c -o video-file-context.o video-file-context.cc
+video-decode-context.o : video-decode-context.cc video-decode-context.h decode-context.h $(INC)
+	$(CC) $(CPPFLAGS) -c -o video-decode-context.o video-decode-context.cc
 
 display.o : display.cc display.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o display.o display.cc

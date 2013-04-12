@@ -13,12 +13,12 @@
 #include <string>
 #include <sstream>
 
-#include "video-file-context.h"
+#include "video-decode-context.h"
 #include "sdl-holder.h"
 
 using namespace std;
 
-void video_file_context::scale_frame2(AME_VIDEO_FRAME* frame)
+void video_decode_context::scale_frame2(AME_VIDEO_FRAME* frame)
 {
     AVCodecContext* codec_context = get_codec_context();
 
@@ -47,7 +47,7 @@ void video_file_context::scale_frame2(AME_VIDEO_FRAME* frame)
     frame->skipped_p = false;
 }
 
-void video_file_context::scale_frame(AME_VIDEO_FRAME* frame)
+void video_decode_context::scale_frame(AME_VIDEO_FRAME* frame)
 {
     AVCodecContext* codec_context = get_codec_context();
 
@@ -85,7 +85,7 @@ void video_file_context::scale_frame(AME_VIDEO_FRAME* frame)
     //caux << "decode frame:pts_ms:" << best_pts << ":"  << pkt_pts << endl;
 }
 
-int video_file_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
+int video_decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
 {
     int frame_ctr = 0;
 
@@ -154,15 +154,15 @@ int video_file_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
     return frame_ctr;
 }
 
-video_file_context::video_file_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, SDL_Overlay* overlay):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2),buffer_( ring_buffer ), overlay_(overlay), functor_(this, &video_file_context::decode_frames)
+video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, SDL_Overlay* overlay):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2),buffer_( ring_buffer ), overlay_(overlay), functor_(this, &video_decode_context::decode_frames)
 {
 }
 
-video_file_context::~video_file_context()
+video_decode_context::~video_decode_context()
 {
 }
 
-void video_file_context::operator()(int start_at)
+void video_decode_context::operator()(int start_at)
 {
     try
     {

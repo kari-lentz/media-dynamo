@@ -18,7 +18,7 @@ static const unsigned long STDIN_MAX = 1000000;
 #include <SDL/SDL.h>
 
 #include "env-writer.h"
-#include "video-file-context.h"
+#include "video-decode-context.h"
 #include "display.h"
 #include "video-player.h"
 #include "sdl-holder.h"
@@ -29,14 +29,14 @@ using namespace std;
 
 logger_t logger("VIDEO-DISPLAY");
 
-static void* video_file_context_thread(void *parg)
+static void* video_decode_context_thread(void *parg)
 {
-    env_video_file_context* penv = (env_video_file_context*) parg;
+    env_video_decode_context* penv = (env_video_decode_context*) parg;
 
     try
     {
-        video_file_context vfc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
-        vfc();
+        video_decode_context vdc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
+        vdc();
         caux << "decode operation complete" << endl;
         penv->ret = 0;
     }
@@ -101,7 +101,7 @@ void do_exit(pthread_t thread_display, pthread_t thread_fc)
 int run_decode(const char* mp4_file_path)
 {
     ring_buffer_t ring_buffer(24,  6);
-    env_video_file_context env_fc;
+    env_video_decode_context env_vdc;
     env_display_context env_display;
     int ret = 0;
     pthread_t thread_fc, thread_display;
@@ -110,13 +110,13 @@ int run_decode(const char* mp4_file_path)
     {
         sdl_holder sdl(854, 480, &thread_fc, &thread_display);
 
-        env_fc.mp4_file_path = mp4_file_path;
-        env_fc.overlay = sdl.get_overlay();
-        env_fc.start_at = 0;
-        env_fc.ring_buffer = &ring_buffer;
-        env_fc.ret = 0;
+        env_vdc.mp4_file_path = mp4_file_path;
+        env_vdc.overlay = sdl.get_overlay();
+        env_vdc.start_at = 0;
+        env_vdc.ring_buffer = &ring_buffer;
+        env_vdc.ret = 0;
 
-        int ret = pthread_create( &thread_fc, NULL, &video_file_context_thread, &env_fc );
+        int ret = pthread_create( &thread_fc, NULL, &video_decode_context_thread, &env_vdc );
 
         if( ret < 0 )
         {
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
       exit(1);
   }
 
-  int ret = run_decode( "/mnt/MUSIC/test.hd.mp4" );
+  int ret = run_decode( "/mnt/MUSIC-THD/test.hd.mp4" );
 
   SDL_Quit();
 
