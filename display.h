@@ -28,6 +28,7 @@ private:
     specific_streamer<display, AME_VIDEO_FRAME> functor_;
     SDL_Surface* screen_;
     SDL_Overlay* overlay_;
+    bool error_p_;
 
     int display_frame(AME_VIDEO_FRAME* pframes, int num_frames);
     int call(AME_VIDEO_FRAME* pbuffer, int num_bytes);

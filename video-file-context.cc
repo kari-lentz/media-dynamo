@@ -89,6 +89,8 @@ int video_file_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
 {
     int frame_ctr = 0;
 
+    if( error_p_ ) return -1;
+
     try
     {
         AVCodecContext* codec_context = get_codec_context();
@@ -171,7 +173,13 @@ void video_file_context::operator()(int start_at)
         do
         {
             ret = buffer_->write_period( &functor_ );
-        } while(ret > 0 && !sdl_holder::done);
+
+            if( sdl_holder::done )
+            {
+                error_p_ = true;
+            }
+
+        } while(ret > 0);
     }
     catch(app_fault& e)
     {

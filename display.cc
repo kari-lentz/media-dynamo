@@ -24,6 +24,8 @@ extern lock_t<bool> global_done;
 
 int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
 {
+    if( error_p_ ) return -1;
+
     //find the lowest acceptable pts and play that
     //typically the highest out of the ones that are lower.
     //
@@ -116,7 +118,7 @@ int display::call(AME_VIDEO_FRAME* pframes, int num_frames)
     }
 }
 
-display::display(ring_buffer_t* pbuffer, SDL_Overlay* overlay):pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(overlay)
+display::display(ring_buffer_t* pbuffer, SDL_Overlay* overlay):pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(overlay), error_p_(false)
 {
 }
 
@@ -129,6 +131,7 @@ int display::operator()()
 {
     int ret;
     begin_tick_ms_ = SDL_GetTicks();
+    error_p_ = false;
 
     do
     {
@@ -137,7 +140,12 @@ int display::operator()()
         int delay = 20;
         usleep( delay * 1000 );
 
-    }  while( ret >= 0 && !sdl_holder::done);
+        if( sdl_holder::done )
+        {
+            error_p_ = true;
+        }
+
+    }  while( ret >= 0 && !pbuffer_->is_eof());
 
     return ret;
 }

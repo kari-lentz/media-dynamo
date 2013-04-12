@@ -16,6 +16,7 @@ private:
 
     AVFormatContext* oc_;
     FILE* outfile_;
+    bool error_p_;
 
     void scale_frame(AME_VIDEO_FRAME* frame);
     void scale_frame2(AME_VIDEO_FRAME* frame);
