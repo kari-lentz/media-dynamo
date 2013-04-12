@@ -118,6 +118,17 @@ ring_buffer( size_t frames_per_period, size_t periods):frames_per_period_(frames
    return frames_per_period_;
  }
 
+ int is_eof()
+ {
+     bool ret;
+
+     pthread_mutex_lock( &mutex_ );
+     ret = eof_p_;
+     pthread_mutex_unlock( &mutex_ );
+
+     return ret;
+ }
+
  int read_avail( streamer<T>* pfnreader )
  {
    pthread_mutex_lock( &mutex_ );
