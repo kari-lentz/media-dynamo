@@ -18,7 +18,9 @@
 
 using namespace std;
 
-void video_decode_context::scale_frame2(AME_VIDEO_FRAME* frame)
+template <> logger_t decode_context<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
+
+void video_decode_context::write_frame2(AME_VIDEO_FRAME* frame)
 {
     AVCodecContext* codec_context = get_codec_context();
 
@@ -47,7 +49,7 @@ void video_decode_context::scale_frame2(AME_VIDEO_FRAME* frame)
     frame->skipped_p = false;
 }
 
-void video_decode_context::scale_frame(AME_VIDEO_FRAME* frame)
+void video_decode_context::write_frame(AME_VIDEO_FRAME* frame)
 {
     AVCodecContext* codec_context = get_codec_context();
 
@@ -85,76 +87,7 @@ void video_decode_context::scale_frame(AME_VIDEO_FRAME* frame)
     //caux << "decode frame:pts_ms:" << best_pts << ":"  << pkt_pts << endl;
 }
 
-int video_decode_context::decode_frames(AME_VIDEO_FRAME* frames, int size)
-{
-    int frame_ctr = 0;
-
-    if( error_p_ ) return -1;
-
-    try
-    {
-        AVCodecContext* codec_context = get_codec_context();
-
-        if( !codec_context )
-        {
-            stringstream ss;
-            ss << "expected initialized codec context and its not there!!!";
-            throw app_fault( ss.str().c_str() );
-        }
-
-        AVPacket pkt;
-
-        av_init_packet(&pkt);
-        pkt.data = NULL;
-        pkt.size = 0;
-
-        while( frame_ctr < size )
-        {
-            int ret = 0;
-            int got_frame = 0;
-
-            /* read frames from the file */
-            if( av_read_frame(format_context_, &pkt) >= 0 )
-            {
-                //caux << "read frame:dts:" << pkt.dts * av_q2d(codec_context->time_base) << ":pts:" << pkt.pts * av_q2d(codec_context->time_base) << endl;
-
-                if (pkt.stream_index == stream_idx_)
-                {
-                    /* decode video frame */
-                    ret = (*avcodec_decode_function_)(codec_context, frame_, &got_frame, &pkt);
-                    if (ret < 0)
-                    {
-                        stringstream ss;
-                        ss << "Error decoding video frame";
-                        throw app_fault( ss.str().c_str() );
-                    }
-
-                    if( got_frame )
-                    {
-                        scale_frame(&frames[ frame_ctr ]);
-                        ++frame_ctr;
-                    }
-                }
-            }
-            else
-            {
-                caux << "hit eof:" << frame_ctr << endl;
-                break;
-            }
-
-            av_free_packet(&pkt);
-        }
-    }
-    catch( app_fault& e )
-    {
-        logger << e << endl;
-        return -1;
-    }
-
-    return frame_ctr;
-}
-
-video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, SDL_Overlay* overlay):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2),buffer_( ring_buffer ), overlay_(overlay), functor_(this, &video_decode_context::decode_frames)
+video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, SDL_Overlay* overlay):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2),buffer_( ring_buffer ), overlay_(overlay), functor_(this, &decode_context::decode_frames)
 {
 }
 

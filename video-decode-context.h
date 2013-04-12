@@ -16,7 +16,7 @@ typedef struct
     int ret;
 } env_video_decode_context;
 
-class video_decode_context:public decode_context
+class video_decode_context:public decode_context<AME_VIDEO_FRAME>
 {
 private:
     ring_buffer_t* buffer_;
@@ -26,10 +26,9 @@ private:
 
     AVFormatContext* oc_;
     FILE* outfile_;
-    bool error_p_;
 
-    void scale_frame(AME_VIDEO_FRAME* frame);
-    void scale_frame2(AME_VIDEO_FRAME* frame);
+    void write_frame2(AME_VIDEO_FRAME* frame);
+    void write_frame(AME_VIDEO_FRAME* frame);
     int decode_frames(AME_VIDEO_FRAME* frames, int size);
 
 public:

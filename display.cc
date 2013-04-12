@@ -79,7 +79,7 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
             throw app_fault( ss.str().c_str() );
         }
 
-        // caux << "played frame at media ms:" << media_ms << ":pts_ms:" << pframe_playable->pts_ms << ":num_frames:" << num_frames << endl;
+        // caux_video << "played frame at media ms:" << media_ms << ":pts_ms:" << pframe_playable->pts_ms << ":num_frames:" << num_frames << endl;
     }
 
     int ret = 0;
@@ -100,7 +100,7 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
         }
     }
 
-    //caux << "processed " << ret << " frames" << endl;
+    //caux_video << "processed " << ret << " frames" << endl;
 
     return ret;
 }

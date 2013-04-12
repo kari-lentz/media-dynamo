@@ -27,8 +27,6 @@ static const unsigned long STDIN_MAX = 1000000;
 
 using namespace std;
 
-logger_t logger("VIDEO-DISPLAY");
-
 static void* video_decode_context_thread(void *parg)
 {
     env_video_decode_context* penv = (env_video_decode_context*) parg;
@@ -37,23 +35,23 @@ static void* video_decode_context_thread(void *parg)
     {
         video_decode_context vdc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
         vdc();
-        caux << "decode operation complete" << endl;
+        caux_video << "decode operation complete" << endl;
         penv->ret = 0;
     }
     catch( app_fault& e )
     {
         penv->ret = -1;
-        decode_context::logger << "caught exception:" << e << endl;
+        decode_context<AME_VIDEO_FRAME>::logger << "caught exception:" << e << endl;
     }
     catch (const std::ios_base::failure& e)
     {
         penv->ret = -1;
-        decode_context::logger << "Exception opening/reading file" << endl;
+        decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
     }
     catch (exception& e)
     {
         penv->ret = -1;
-        decode_context::logger << "Exception opening/reading file" << endl;
+        decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
     }
 
     return &penv->ret;
@@ -67,23 +65,23 @@ static void* display_thread(void *parg)
     {
         display d(penv->ring_buffer, penv->overlay);
         d();
-        caux << "display complete" << endl;
+        caux_video << "display complete" << endl;
         penv->ret = 0;
     }
     catch( app_fault& e )
     {
         penv->ret = -1;
-        decode_context::logger << "caught exception:" << e << endl;
+        decode_context<AME_VIDEO_FRAME>::logger << "caught exception:" << e << endl;
     }
     catch (const std::ios_base::failure& e)
     {
         penv->ret = -1;
-        decode_context::logger << "Exception opening/reading file" << endl;
+        decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
     }
     catch (exception& e)
     {
         penv->ret = -1;
-        decode_context::logger << "Exception opening/reading file" << endl;
+        decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
     }
 
     return &penv->ret;
