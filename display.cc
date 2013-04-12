@@ -28,12 +28,13 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
     //
     int lowest_ms = 60000 * 1440;
     AME_VIDEO_FRAME* pframe_playable = NULL;
+    int media_ms = (int) (SDL_GetTicks() - begin_tick_ms_);
 
     for( int idx = 0; idx < num_frames; ++idx )
     {
         AME_VIDEO_FRAME* pframe = &pframes[ idx ];
 
-        if(pframe->pts_ms < media_ms_)
+        if(pframe->pts_ms < media_ms)
         {
             pframe->skipped_p = true;
         }
@@ -77,7 +78,7 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
             throw app_fault( ss.str().c_str() );
         }
 
-        media_ms_ = pframe_playable->pts_ms;
+        media_ms = pframe_playable->pts_ms;
 
         //caux << "played frame as media ms:" << media_ms_ << ":pitch:" << overlay_->pitches[0] << ":num_frames:" << num_frames << endl;
     }
@@ -118,7 +119,7 @@ int display::call(AME_VIDEO_FRAME* pframes, int num_frames)
     }
 }
 
-display::display(ring_buffer_t* pbuffer, SDL_Overlay* overlay):media_ms_(0), pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(overlay)
+display::display(ring_buffer_t* pbuffer, SDL_Overlay* overlay):pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(overlay)
 {
 }
 
@@ -130,7 +131,7 @@ display::~display()
 int display::operator()()
 {
     int ret;
-    media_ms_ = 0;
+    begin_tick_ms_ = SDL_GetTicks();
 
     do
     {
@@ -138,7 +139,6 @@ int display::operator()()
 
         int delay = 20;
         usleep( delay * 1000 );
-        media_ms_ = media_ms_ + delay;
 
     }  while( ret > 0 && !sdl_holder::done);
 

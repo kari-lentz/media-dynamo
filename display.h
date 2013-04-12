@@ -23,7 +23,7 @@ class display
 {
 private:
 
-    int media_ms_;
+    Uint32 begin_tick_ms_;
     ring_buffer_t* pbuffer_;
     specific_streamer<display, AME_VIDEO_FRAME> functor_;
     SDL_Surface* screen_;
