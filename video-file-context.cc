@@ -73,14 +73,16 @@ void video_file_context::scale_frame(AME_VIDEO_FRAME* frame)
     sws_scale(sws_context, frame_->data, frame_->linesize, 0, frame_->height, frame->data, frame->linesize);
     av_free( sws_context );
 
-    frame->pts_ms = av_frame_get_best_effort_timestamp(frame_) * av_q2d(codec_context->time_base);
+    int best_pts = av_frame_get_best_effort_timestamp(frame_) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
+    //int pkt_pts = frame_->pkt_dts * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
+    frame->pts_ms = best_pts;
 
     frame->width = codec_context->width;
     frame->height = codec_context->height;
     frame->played_p = false;
     frame->skipped_p = false;
 
-    //caux << "decode frame:pts_ms:" << frame->pts_ms << ":"  << final_height << endl;
+    //caux << "decode frame:pts_ms:" << best_pts << ":"  << pkt_pts << endl;
 }
 
 int video_file_context::decode_frames(AME_VIDEO_FRAME* frames, int size)

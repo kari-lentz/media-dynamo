@@ -25,8 +25,9 @@ extern lock_t<bool> global_done;
 int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
 {
     //find the lowest acceptable pts and play that
+    //typically the highest out of the ones that are lower.
     //
-    int lowest_ms = 60000 * 1440;
+    int highest_ms = 0;
     AME_VIDEO_FRAME* pframe_playable = NULL;
     int media_ms = (int) (SDL_GetTicks() - begin_tick_ms_);
 
@@ -34,15 +35,13 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
     {
         AME_VIDEO_FRAME* pframe = &pframes[ idx ];
 
-        if(pframe->pts_ms < media_ms)
+        if(pframe->pts_ms <= media_ms)
         {
             pframe->skipped_p = true;
-        }
-        else
-        {
-            if( !pframe->skipped_p && !pframe->played_p && pframe->pts_ms <= lowest_ms )
+
+            if( !pframe->played_p && pframe->pts_ms >= highest_ms )
             {
-                lowest_ms = pframe->pts_ms;
+                highest_ms = pframe->pts_ms;
                 pframe_playable = pframe;
             }
         }
@@ -78,9 +77,7 @@ int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
             throw app_fault( ss.str().c_str() );
         }
 
-        media_ms = pframe_playable->pts_ms;
-
-        //caux << "played frame as media ms:" << media_ms_ << ":pitch:" << overlay_->pitches[0] << ":num_frames:" << num_frames << endl;
+        // caux << "played frame at media ms:" << media_ms << ":pts_ms:" << pframe_playable->pts_ms << ":num_frames:" << num_frames << endl;
     }
 
     int ret = 0;
@@ -140,7 +137,7 @@ int display::operator()()
         int delay = 20;
         usleep( delay * 1000 );
 
-    }  while( ret > 0 && !sdl_holder::done);
+    }  while( ret >= 0 && !sdl_holder::done);
 
     return ret;
 }
