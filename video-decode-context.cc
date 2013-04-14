@@ -101,18 +101,11 @@ void video_decode_context::operator()(int start_at)
     {
         start_stream(start_at);
 
-        int ret;
-
         do
         {
-            ret = buffer_->write_period( &functor_ );
+            buffer_->write_period( &functor_ );
 
-            if( sdl_holder::done )
-            {
-                error_p_ = true;
-            }
-
-        } while(ret > 0);
+        } while(!buffer_->is_done());
     }
     catch(app_fault& e)
     {

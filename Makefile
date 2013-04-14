@@ -27,7 +27,7 @@ $(TARGET) : $(OBJECTS)
 #
 # Compile commands
 #
-video-player.o : video-player.cc thread-lock.h video-player.h video-decode-context.h decode-context.h ffmpeg-headers.h $(INC)
+video-player.o : video-player.cc video-player.h video-decode-context.h decode-context.h ffmpeg-headers.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o video-player.o $(FLAGS_MYSQL) video-player.cc
 
 sdl-holder.o : sdl-holder.cc sdl-holder.h

@@ -1,7 +1,6 @@
 #include "sdl-holder.h"
 
 logger_t sdl_holder::logger("VIDEO-PLAYER");
-lock_t<bool> sdl_holder::done;
 
 sdl_holder::sdl_holder(int width, int height, pthread_t* pthread_fc, pthread_t* pthread_display):pthread_fc_(pthread_fc),pthread_display_(pthread_display),surface_(0),overlay_(0)
 {
@@ -25,8 +24,8 @@ sdl_holder::sdl_holder(int width, int height, pthread_t* pthread_fc, pthread_t* 
 
 sdl_holder::~sdl_holder()
 {
-    logger << "will wait for secondary thread completion:last ret:" << endl;
-\
+    logger << "will wait for secondary thread completion" << endl;
+
     pthread_join( *pthread_display_, NULL );
     pthread_join( *pthread_fc_, NULL );
     logger << "all secondary threads down" << endl;
@@ -47,11 +46,12 @@ SDL_Surface* sdl_holder::get_surface()
     return surface_;
 }
 
-void sdl_holder::message_loop()
+void sdl_holder::message_loop(ring_buffer_t& ring_buffer)
 {
     SDL_Event event;
+    bool done_p = false;
 
-    while( !sdl_holder::done )
+    for( ;!done_p; )
     {
         SDL_WaitEvent(&event);
 
@@ -60,9 +60,11 @@ void sdl_holder::message_loop()
         case SDL_KEYDOWN:
             logger << "The " << SDL_GetKeyName(event.key.keysym.sym) << "  key was pressed!" << endl;
             break;
+        case MY_DONE:
         case SDL_QUIT:
             logger << "The primary quit event detected" << endl;
-            sdl_holder::done = (lock_t<bool>) true;
+            ring_buffer.close_out();
+            done_p = true;
             break;
         }
     }

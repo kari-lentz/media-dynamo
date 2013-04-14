@@ -4,7 +4,9 @@
 #include <SDL/SDL.h>
 #include "app-fault.h"
 #include "logger.h"
-#include "thread-lock.h"
+#include "ring-buffer-video.h"
+
+#define MY_DONE (SDL_USEREVENT + 0)
 
 class sdl_holder
 {
@@ -22,12 +24,11 @@ public:
     ~sdl_holder();
 
     static logger_t logger;
-    static lock_t<bool> done;
 
     SDL_Overlay* get_overlay();
     SDL_Surface* get_surface();
 
-    void message_loop();
+    void message_loop(ring_buffer_t& ring_buffer);
 };
 
 #endif

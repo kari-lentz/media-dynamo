@@ -37,6 +37,10 @@ static void* video_decode_context_thread(void *parg)
         vdc();
         caux_video << "decode operation complete" << endl;
         penv->ret = 0;
+
+        SDL_Event event;
+        event.type = MY_DONE;
+        SDL_PushEvent(&event);
     }
     catch( app_fault& e )
     {
@@ -67,6 +71,10 @@ static void* display_thread(void *parg)
         d();
         caux_video << "display complete" << endl;
         penv->ret = 0;
+
+        SDL_Event event;
+        event.type = MY_DONE;
+        SDL_PushEvent(&event);
     }
     catch( app_fault& e )
     {
@@ -85,15 +93,6 @@ static void* display_thread(void *parg)
     }
 
     return &penv->ret;
-}
-
-void do_exit(pthread_t thread_display, pthread_t thread_fc)
-{
-    sdl_holder::done = (lock_t<bool>) true;
-
-    pthread_join( thread_display, NULL );
-    pthread_join( thread_fc, NULL );
-    display::logger << "all secondary threads down" << endl;
 }
 
 int run_decode(const char* mp4_file_path)
@@ -135,7 +134,7 @@ int run_decode(const char* mp4_file_path)
             throw app_fault( ss.str().c_str() );
         }
 
-        sdl.message_loop();
+        sdl.message_loop(ring_buffer);
     }
     catch(app_fault& e)
     {

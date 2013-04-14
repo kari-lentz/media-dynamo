@@ -20,7 +20,6 @@
 using namespace std;
 
 logger_t display::logger("VIDEO-PLAYER");
-extern lock_t<bool> global_done;
 
 int display::display_frame(AME_VIDEO_FRAME* pframes, int num_frames)
 {
@@ -129,23 +128,17 @@ display::~display()
 
 int display::operator()()
 {
-    int ret;
     begin_tick_ms_ = SDL_GetTicks();
     error_p_ = false;
 
     do
     {
-        ret = pbuffer_->read_avail( &functor_ );
+        pbuffer_->read_avail( &functor_ );
 
         int delay = 20;
         usleep( delay * 1000 );
 
-        if( sdl_holder::done )
-        {
-            error_p_ = true;
-        }
+    }  while( !pbuffer_->is_done() );
 
-    }  while( ret >= 0 && !pbuffer_->is_eof());
-
-    return ret;
+    return 0;
 }
