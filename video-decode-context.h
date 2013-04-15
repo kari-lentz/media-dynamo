@@ -2,6 +2,7 @@
 #define VIDEO_DECODE_CONTEXT_H
 
 #include "decode-context.h"
+#include "ring-buffer-video.h"
 #include <SDL/SDL.h>
 
 using namespace std;

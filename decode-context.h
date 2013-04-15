@@ -13,7 +13,6 @@
 #include <exception>
 #include <SDL/SDL.h>
 #include "app-fault.h"
-#include "ring-buffer-video.h"
 #include "logger.h"
 #include "decode-context.h"
 #include "logger.h"
@@ -44,7 +43,7 @@ private:
         else
         {
             *stream_idx = ret;
-            caux_video << "found video stream id:" << *stream_idx << endl;
+            caux << "found video stream id:" << *stream_idx << endl;
             st = fmt_ctx->streams[*stream_idx];
 
             /* find decoder for the stream */
@@ -64,7 +63,7 @@ private:
                 throw app_fault( ss.str().c_str() );
             }
 
-            caux_video << "opened decoder" << endl;
+            caux << "opened decoder" << endl;
         }
     }
 
@@ -115,7 +114,7 @@ protected:
         remaining_stream_bytes_ = 0;
         error_p_ = false;
 
-        caux_video << "seek audio for:" << mp4_file_path_.c_str() << endl;
+        caux << "seek audio for:" << mp4_file_path_.c_str() << endl;
 
         /* open input file, and allocate format context */
         if (avformat_open_input(&format_context_, mp4_file_path_.c_str(), NULL, NULL) < 0)
@@ -125,7 +124,7 @@ protected:
             throw app_fault( ss.str().c_str() );
         }
 
-        caux_video << "opened input file:" << mp4_file_path_ << endl;
+        caux << "opened input file:" << mp4_file_path_ << endl;
 
         /* retrieve stream information */
         if (avformat_find_stream_info(format_context_, NULL) < 0)
@@ -137,7 +136,7 @@ protected:
 
         open_codec_context(&stream_idx_, format_context_, type_);
 
-        caux_video << "opened codec context" << endl;
+        caux << "opened codec context" << endl;
 
         if( !frame_ )
         {
@@ -151,7 +150,7 @@ protected:
         }
     }
 
-    virtual void write_frame(AME_VIDEO_FRAME* frame)=0;
+    virtual void write_frame(T* frame)=0;
 
 public:
 
@@ -208,7 +207,7 @@ public:
                 }
                 else
                 {
-                    caux_video << "hit eof:" << frame_ctr << endl;
+                    caux << "hit eof:" << frame_ctr << endl;
                     break;
                 }
 
@@ -247,7 +246,7 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
 
     virtual ~decode_context()
     {
-        caux_video << "closing file context" << endl;
+        caux << "closing file context" << endl;
 
         if( frame_ )
         {
@@ -255,7 +254,7 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
             frame_ = NULL;
         }
 
-        caux_video << "freed frame" << endl;
+        caux << "freed frame" << endl;
 
         if( format_context_ )
         {
@@ -268,13 +267,13 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
                 if( c ) avcodec_close( c );
             }
 
-            caux_video << "closed codec" << endl;
+            caux << "closed codec" << endl;
 
             /* free the entire format*/
             avformat_free_context(format_context_);
         }
 
-        caux_video << "decoder destroyed" << endl;
+        caux << "decoder destroyed" << endl;
     }
 
 };

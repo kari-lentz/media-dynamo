@@ -12,9 +12,11 @@ using namespace std;
 
 #ifndef _THD_DEBUG
 #define caux_video my_null_stream
+#define caux my_null_stream
 //#define caux cerr
 #else
 #define caux_video decode_context<AME_VIDEO_FRAME>::logger
+#define caux decode_context<T>::logger
 #endif
 
 class app_fault
