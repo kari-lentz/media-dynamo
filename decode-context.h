@@ -105,6 +105,8 @@ protected:
     int remaining_stream_bytes_;
 
     AVFormatContext *format_context_;
+    AVPacket packet_;
+    AVPacket packet_temp_;
     bool error_p_;
 
     void start_stream(int start_at = 0)
@@ -171,47 +173,69 @@ public:
                 throw app_fault( ss.str().c_str() );
             }
 
-            AVPacket pkt;
-
-            av_init_packet(&pkt);
-            pkt.data = NULL;
-            pkt.size = 0;
-
             while( frame_ctr < size )
             {
                 int ret = 0;
                 int got_frame = 0;
 
-                /* read frames from the file */
-                if( av_read_frame(format_context_, &pkt) >= 0 )
+                if( packet_temp_.size == 0 )
                 {
-                    //caux_video << "read frame:dts:" << pkt.dts * av_q2d(codec_context->time_base) << ":pts:" << pkt.pts * av_q2d(codec_context->time_base) << endl;
-
-                    if (pkt.stream_index == stream_idx_)
+                    /* read frames from the file */
+                    if( av_read_frame(format_context_, &packet_) >= 0 )
                     {
-                        /* decode video frame */
-                        ret = (*avcodec_decode_function_)(codec_context, frame_, &got_frame, &pkt);
-                        if (ret < 0)
-                        {
-                            stringstream ss;
-                            ss << "Error decoding video frame";
-                            throw app_fault( ss.str().c_str() );
-                        }
+                        packet_temp_.size = packet_.size;
+                        packet_temp_.data = packet_.data;
+                        packet_temp_.stream_index = packet_.stream_index;
+                        packet_temp_.pts = packet_.pts;
+                        packet_temp_.dts = packet_.dts;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
 
-                        if( got_frame )
-                        {
-                            write_frame(&frames[ frame_ctr ]);
-                            ++frame_ctr;
-                        }
+                if (packet_temp_.stream_index == stream_idx_)
+                {
+                    //caux << "raw read frame:size:" << packet_.size  << ":pts:" << packet_.pts * av_q2d(codec_context->time_base) << endl;
+
+                    /* decode frame */
+                    ret = (*avcodec_decode_function_)(codec_context, frame_, &got_frame, &packet_temp_);
+                    if (ret < 0)
+                    {
+                        stringstream ss;
+                        ss << "Error decoding video frame";
+                        throw app_fault( ss.str().c_str() );
+                    }
+
+                    packet_temp_.size -= ret;
+                    packet_temp_.data += ret;
+
+                    if( got_frame )
+                    {
+                        write_frame(&frames[ frame_ctr ]);
+                        ++frame_ctr;
+                    }
+
+                    if( packet_temp_.size <= 0 )
+                    {
+                        av_free_packet( &packet_ );
+                        av_init_packet( &packet_ );
+                        packet_.size = 0;
+                        packet_.data = NULL;
+                        packet_temp_.size = 0;
+                        packet_temp_.data = NULL;
                     }
                 }
                 else
                 {
-                    caux << "hit eof:" << frame_ctr << endl;
-                    break;
+                    av_free_packet( &packet_ );
+                    av_init_packet( &packet_ );
+                    packet_.size = 0;
+                    packet_.data = NULL;
+                    packet_temp_.size = 0;
+                    packet_temp_.data = NULL;
                 }
-
-                av_free_packet(&pkt);
             }
         }
         catch( app_fault& e )
@@ -242,10 +266,20 @@ public:
 decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_function_t avcodec_decode_function):mp4_file_path_(mp4_file_path), type_(type), avcodec_decode_function_(avcodec_decode_function), error_p_(false)
     {
         av_log_set_callback( &decode_context::log_callback );
+
+        av_init_packet( &packet_ );
+        packet_.data = NULL;
+        packet_.size = 0;
+
+        packet_temp_.data = NULL;
+        packet_temp_.size = 0;
+        av_init_packet( &packet_temp_ );
     }
 
     virtual ~decode_context()
     {
+        av_free_packet( &packet_ );
+        av_free_packet( &packet_temp_ );
         caux << "closing file context" << endl;
 
         if( frame_ )
