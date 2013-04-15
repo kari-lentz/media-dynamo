@@ -28,7 +28,7 @@ public:
     SDL_Overlay* get_overlay();
     SDL_Surface* get_surface();
 
-    void message_loop(ring_buffer_t& ring_buffer);
+    void message_loop(ring_buffer_video_t& ring_buffer);
 };
 
 #endif

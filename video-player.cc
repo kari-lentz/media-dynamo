@@ -97,7 +97,7 @@ static void* display_thread(void *parg)
 
 int run_decode(const char* mp4_file_path)
 {
-    ring_buffer_t ring_buffer(24,  6);
+    ring_buffer_video_t ring_buffer(24,  6);
     env_video_decode_context env_vdc;
     env_display_context env_display;
     int ret = 0;

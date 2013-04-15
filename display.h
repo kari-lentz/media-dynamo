@@ -13,7 +13,7 @@ using namespace std;
 
 typedef struct
 {
-    ring_buffer_t* ring_buffer;
+    ring_buffer_video_t* ring_buffer;
     SDL_Overlay* overlay;
     bool debug_p;
     int ret;
@@ -24,7 +24,7 @@ class display
 private:
 
     Uint32 begin_tick_ms_;
-    ring_buffer_t* pbuffer_;
+    ring_buffer_video_t* pbuffer_;
     specific_streamer<display, AME_VIDEO_FRAME> functor_;
     SDL_Surface* screen_;
     SDL_Overlay* overlay_;
@@ -37,7 +37,7 @@ public:
 
     static logger_t logger;
 
-    display(ring_buffer_t* pbuffer, SDL_Overlay* overlay);
+    display(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay);
     ~display();
 
     int operator()();

@@ -117,7 +117,7 @@ int display::call(AME_VIDEO_FRAME* pframes, int num_frames)
     }
 }
 
-display::display(ring_buffer_t* pbuffer, SDL_Overlay* overlay):pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(overlay), error_p_(false)
+display::display(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):pbuffer_(pbuffer), functor_(this, &display::call), screen_(NULL), overlay_(overlay), error_p_(false)
 {
 }
 

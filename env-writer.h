@@ -6,7 +6,7 @@
 typedef struct
 {
   const char* pf_;
-  ring_buffer_t* pbuffer_;
+  ring_buffer_video_t* pbuffer_;
   int start_at_;
 } env_writer_t;
 

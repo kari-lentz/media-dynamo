@@ -17,6 +17,6 @@ typedef struct
     uint8_t v_data[ 1920 * 1080 / 2 ];
 } AME_VIDEO_FRAME;
 
-typedef ring_buffer<AME_VIDEO_FRAME> ring_buffer_t;
+typedef ring_buffer<AME_VIDEO_FRAME> ring_buffer_video_t;
 
 #endif

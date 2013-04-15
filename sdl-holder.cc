@@ -46,7 +46,7 @@ SDL_Surface* sdl_holder::get_surface()
     return surface_;
 }
 
-void sdl_holder::message_loop(ring_buffer_t& ring_buffer)
+void sdl_holder::message_loop(ring_buffer_video_t& ring_buffer)
 {
     SDL_Event event;
     bool done_p = false;

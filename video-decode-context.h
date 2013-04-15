@@ -10,7 +10,7 @@ typedef struct
 {
     const char* mp4_file_path;
     int start_at;
-    ring_buffer_t* ring_buffer;
+    ring_buffer_video_t* ring_buffer;
     SDL_Overlay* overlay;
     bool debug_p;
     int ret;
@@ -19,7 +19,7 @@ typedef struct
 class video_decode_context:public decode_context<AME_VIDEO_FRAME>
 {
 private:
-    ring_buffer_t* buffer_;
+    ring_buffer_video_t* buffer_;
     SDL_Overlay* overlay_;
 
     specific_streamer<video_decode_context, AME_VIDEO_FRAME> functor_;
@@ -33,7 +33,7 @@ private:
 
 public:
 
-    video_decode_context(const char* mp4_file_path, ring_buffer_t* ring_buffer, SDL_Overlay* overlay);
+    video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay);
     ~video_decode_context();
 
     void operator()(int start_at = 0);
