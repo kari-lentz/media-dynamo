@@ -2,38 +2,7 @@
 #define RING_BUFFER_H
 
 #include <pthread.h>
-
-template <typename T> class streamer
-{
- public:
-  virtual int operator()(T* pbuffer, int nsize) = 0;
-};
-
-template <typename OBJ, typename T> class specific_streamer:public streamer<T>
-{
- private:
-  OBJ* pobj_;
-  int (OBJ::*pfn_)(T* pbuffer, int nsize);
-
- public:
-
-  specific_streamer()
-    {
-      pobj_ = NULL;
-      pfn_ = NULL;
-    }
-
-  specific_streamer( OBJ* pobj, int (OBJ::*pfn)(T* pbuffer, int nsize) )
-  {
-    pobj_ = pobj;
-    pfn_ = pfn;
-  }
-
-  int operator()(T* pbuffer, int nsize)
-  {
-    return (*pobj_.*pfn_) (pbuffer, nsize );
-  }
-};
+#include "streamer.h"
 
 template <typename T> class ring_buffer
 {
@@ -116,6 +85,22 @@ ring_buffer( size_t frames_per_period, size_t periods):frames_per_period_(frames
  int get_frames_per_period()
  {
    return frames_per_period_;
+ }
+
+ int get_periods()
+ {
+     return buffer_size_ / frames_per_period_;
+ }
+
+ int get_available_samples()
+ {
+     int ret;
+
+     pthread_mutex_lock( &mutex_ );
+     ret = get_samples_avail();
+     pthread_mutex_unlock( &mutex_ );
+
+     return ret;
  }
 
  bool is_done()
@@ -210,6 +195,76 @@ void close_out()
    pthread_mutex_unlock( &mutex_ );
 
    return samples;
+ }
+
+int read_period( streamer<T>* pfnreader  )
+ {
+     pthread_mutex_lock( &mutex_ );
+
+     if( !error_p_ && !eof_p_ && get_samples_avail() < frames_per_period_ )
+     {
+         pthread_cond_wait( &cond_empty_, &mutex_ );
+     }
+
+     int limit_ptr = (read_ptr_ + frames_per_period_) % buffer_size_;
+     bool error_p = error_p_;
+     bool empty_p = get_samples_avail() < frames_per_period_;
+     bool eof_p = eof_p_;
+
+     pthread_mutex_unlock( &mutex_ );
+
+     int samples = 0;
+
+     if( error_p )
+     {
+         return -1;
+     }
+     else if( !empty_p )
+     {
+         if( limit_ptr > read_ptr_ )
+	 {
+             samples = (*pfnreader )( pv_ + read_ptr_, limit_ptr - read_ptr_ );
+	 }
+         else
+	 {
+             samples = (*pfnreader )( pv_ + read_ptr_, buffer_size_ - read_ptr_ );
+
+             if(samples > 0 && limit_ptr > 0)
+	     {
+	       samples += (*pfnreader )( pv_, limit_ptr );
+	     }
+	 }
+     }
+     else
+     {
+         if( eof_p )
+         {
+             return 0;
+         }
+     }
+
+     pthread_mutex_lock( &mutex_ );
+
+     if( samples < 0 )
+     {
+         error_p_ = true;
+     }
+     else if( samples > 0 )
+     {
+         full_p_ = false;
+         read_ptr_ = (read_ptr_ + samples) % buffer_size_;
+     }
+
+     // buffer still considered full if write pointer was not far enough ahead
+     //
+     if( error_p_ || buffer_size_ - get_samples_avail() >=  frames_per_period_ )
+     {
+         pthread_cond_signal( &cond_full_ );
+     }
+
+     pthread_mutex_unlock( &mutex_ );
+
+     return samples;
  }
 
 int write_period( streamer<T>* pfnwriter )

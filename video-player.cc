@@ -19,7 +19,7 @@ static const unsigned long STDIN_MAX = 1000000;
 
 #include "env-writer.h"
 #include "video-decode-context.h"
-#include "display.h"
+#include "render-video.h"
 #include "video-player.h"
 #include "sdl-holder.h"
 
@@ -61,14 +61,14 @@ static void* video_decode_context_thread(void *parg)
     return &penv->ret;
 }
 
-static void* display_thread(void *parg)
+static void* render_video_thread(void *parg)
 {
-    env_display_context* penv = (env_display_context*) parg;
+    env_render_video_context* penv = (env_render_video_context*) parg;
 
     try
     {
-        display d(penv->ring_buffer, penv->overlay);
-        d();
+        render_video rv(penv->ring_buffer, penv->overlay);
+        rv();
         caux_video << "display complete" << endl;
         penv->ret = 0;
 
@@ -99,13 +99,13 @@ int run_decode(const char* mp4_file_path)
 {
     ring_buffer_video_t ring_buffer(24,  6);
     env_video_decode_context env_vdc;
-    env_display_context env_display;
+    env_render_video_context env_render_video;
     int ret = 0;
-    pthread_t thread_fc, thread_display;
+    pthread_t thread_fc, thread_render_video;
 
     try
     {
-        sdl_holder sdl(854, 480, &thread_fc, &thread_display);
+        sdl_holder sdl(854, 480, &thread_fc, &thread_render_video);
 
         env_vdc.mp4_file_path = mp4_file_path;
         env_vdc.overlay = sdl.get_overlay();
@@ -122,15 +122,15 @@ int run_decode(const char* mp4_file_path)
             throw app_fault( ss.str().c_str() );
         }
 
-        env_display.ring_buffer = &ring_buffer;
-        env_display.overlay = sdl.get_overlay();
+        env_render_video.ring_buffer = &ring_buffer;
+        env_render_video.overlay = sdl.get_overlay();
 
-        ret = pthread_create( &thread_display, NULL, &display_thread, &env_display );
+        ret = pthread_create( &thread_render_video, NULL, &render_video_thread, &env_render_video );
 
         if( ret < 0 )
         {
             stringstream ss;
-            ss << "display thread create error:"  << strerror( ret );
+            ss << "render video thread create error:"  << strerror( ret );
             throw app_fault( ss.str().c_str() );
         }
 
@@ -143,12 +143,12 @@ int run_decode(const char* mp4_file_path)
     }
     catch (const std::ios_base::failure& e)
     {
-        display::logger << "Exception opening/reading file";
+        render_video::logger << "Exception opening/reading file";
         ret = -1;
     }
     catch (exception& e)
     {
-        display::logger << "Exception opening/reading file";
+        render_video::logger << "Exception opening/reading file";
         ret = -1;
     }
 
