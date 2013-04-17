@@ -6,7 +6,6 @@
 #include <SDL/SDL.h>
 #include "app-fault.h"
 #include "ring-buffer.h"
-#include "ring-buffer-video.h"
 #include "logger.h"
 
 using namespace std;
@@ -20,7 +19,7 @@ protected:
 private:
 
     Uint32 begin_tick_ms_;
-    ring_buffer_video_t* pbuffer_;
+    ring_buffer<T>* pbuffer_;
     specific_streamer<render,T> functor_;
     bool error_p_;
 
@@ -76,8 +75,6 @@ private:
             }
         }
 
-        //caux_video << "processed " << ret << " frames" << endl;
-
         return ret;
     }
 
@@ -98,7 +95,7 @@ public:
 
     static logger_t logger;
 
-render(ring_buffer_video_t* pbuffer):pbuffer_(pbuffer), functor_(this, &render<T>::call), error_p_(false){}
+render(ring_buffer<T>* pbuffer):pbuffer_(pbuffer), functor_(this, &render<T>::call), error_p_(false){}
 
     ~render()
     {

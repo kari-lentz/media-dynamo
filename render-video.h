@@ -2,6 +2,7 @@
 #define RENDER_VIDEO_H
 
 #include "render.h"
+#include "ring-buffer-video.h"
 
 typedef struct
 {
