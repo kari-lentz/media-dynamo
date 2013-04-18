@@ -20,35 +20,6 @@ using namespace std;
 
 template <> logger_t decode_context<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
 
-void video_decode_context::write_frame2(AME_VIDEO_FRAME* frame)
-{
-    AVCodecContext* codec_context = get_codec_context();
-
-    AVPicture pict = {{0}};
-
-    frame->data[0] = frame->y_data;
-    frame->data[1] = frame->u_data;
-    frame->data[2] = frame->v_data;
-
-    pict.data[0] = frame->data[0];
-    pict.data[1] = frame->data[1];
-    pict.data[2] = frame->data[2];
-
-    pict.linesize[0] = overlay_->pitches[0];
-    pict.linesize[1] = overlay_->pitches[2];
-    pict.linesize[2] = overlay_->pitches[1];
-
-    // FIXME use direct rendering
-    av_picture_copy(&pict, (AVPicture *)frame_, PIX_FMT_YUV420P, overlay_->w, overlay_->h);
-
-    frame->pts_ms = av_frame_get_best_effort_timestamp(frame_) * av_q2d(codec_context->time_base);
-
-    frame->width = codec_context->width;
-    frame->height = codec_context->height;
-    frame->played_p = false;
-    frame->skipped_p = false;
-}
-
 void video_decode_context::write_frame(AME_VIDEO_FRAME* frame)
 {
     AVCodecContext* codec_context = get_codec_context();

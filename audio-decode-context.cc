@@ -22,6 +22,36 @@ template <> logger_t decode_context<AME_AUDIO_FRAME>::logger("AUDIO-PLAYER");
 
 void audio_decode_context::write_frame(AME_AUDIO_FRAME* frame)
 {
+    struct SwrContext* ctx;
+
+    ctx = swr_alloc_set_opts ( NULL,
+                               av_get_default_channel_layout( 2 ),
+                               AV_SAMPLE_FMT_S16,
+                               44100,
+                               frame_->channel_layout,
+                               (AVSampleFormat) frame_->format,
+                               frame_->sample_rate,
+                               0,
+                               NULL);
+
+    if( ctx )
+    {
+        frame->data[0] = &frame->raw_data[0];
+
+        swr_convert( ctx,
+                     (uint8_t**) frame->data,
+                     4,
+                     (const uint8_t**) frame_->extended_data,
+                     frame_->nb_samples);
+
+        swr_free(&ctx);
+    }
+    else
+    {
+        logger << "no sample context allocated" << endl;
+    }
+
+
     memcpy( frame->data, frame_->data, 4 * sizeof( short ) );
 
     int best_pts = av_frame_get_best_effort_timestamp(frame_) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;

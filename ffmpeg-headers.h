@@ -10,4 +10,5 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 #include <libavutil/pixfmt.h>
+#include <libswresample/swresample.h>
 }

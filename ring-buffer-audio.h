@@ -5,7 +5,8 @@
 
 typedef struct
 {
-    short data[4];
+    short raw_data[1024];
+    short* data[1];
     int pts_ms;
     bool played_p;
     bool skipped_p;

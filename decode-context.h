@@ -208,14 +208,14 @@ public:
                         throw app_fault( ss.str().c_str() );
                     }
 
-                    packet_temp_.size -= ret;
-                    packet_temp_.data += ret;
-
                     if( got_frame )
                     {
                         write_frame(&frames[ frame_ctr ]);
                         ++frame_ctr;
                     }
+
+                    packet_temp_.size -= ret;
+                    packet_temp_.data += ret;
 
                     if( packet_temp_.size <= 0 )
                     {

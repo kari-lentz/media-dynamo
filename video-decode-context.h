@@ -28,7 +28,6 @@ private:
     AVFormatContext* oc_;
     FILE* outfile_;
 
-    void write_frame2(AME_VIDEO_FRAME* frame);
     void write_frame(AME_VIDEO_FRAME* frame);
     int decode_frames(AME_VIDEO_FRAME* frames, int size);
 
