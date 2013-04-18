@@ -23,10 +23,8 @@ private:
     specific_streamer<audio_decode_context, AME_AUDIO_FRAME> functor_;
 
     AVFormatContext* oc_;
-    FILE* outfile_;
 
-    void write_frame(AME_AUDIO_FRAME* frame);
-    int decode_frames(AME_AUDIO_FRAME* frames, int size);
+    void write_frame(AVFrame* frame_in, AME_AUDIO_FRAME* frame_out);
 
 public:
 

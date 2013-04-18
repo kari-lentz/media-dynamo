@@ -16,11 +16,18 @@
 #include "logger.h"
 #include "decode-context.h"
 #include "logger.h"
+#include "vwriter.h"
 
 using namespace std;
 
 typedef void* (*encode_context_thread_t)(void*);
 typedef int (*avcodec_decode_function_t) (AVCodecContext *avctx, AVFrame *picture, int *got_picture_ptr, const AVPacket *avpkt);
+
+class decode_done_t
+{
+public:
+    decode_done_t(){}
+};
 
 template <typename T> class decode_context
 {
@@ -152,100 +159,80 @@ protected:
         }
     }
 
-    virtual void write_frame(T* frame)=0;
+    virtual void write_frame(AVFrame* frame_in, T* frame_out)=0;
 
-public:
-
-    int decode_frames(T* frames, int size)
+    void iter_frame()
     {
-        int frame_ctr = 0;
+        AVCodecContext* codec_context = get_codec_context();
 
-        if( error_p_ ) return -1;
-
-        try
+        if( !codec_context )
         {
-            AVCodecContext* codec_context = get_codec_context();
+            stringstream ss;
+            ss << "expected initialized codec context and its not there!!!";
+            throw app_fault( ss.str().c_str() );
+        }
 
-            if( !codec_context )
+        if( packet_temp_.size == 0 )
+        {
+            /* read frames from the file */
+            if( av_read_frame(format_context_, &packet_) >= 0 )
+            {
+                packet_temp_.size = packet_.size;
+                packet_temp_.data = packet_.data;
+                packet_temp_.stream_index = packet_.stream_index;
+                packet_temp_.pts = packet_.pts;
+                packet_temp_.dts = packet_.dts;
+            }
+            else
+            {
+                throw decode_done_t();
+            }
+        }
+
+        if (packet_temp_.stream_index == stream_idx_)
+        {
+            int got_frame = 0;
+
+            /* decode frame */
+            int ret = (*avcodec_decode_function_)(codec_context, frame_, &got_frame, &packet_temp_);
+            if (ret < 0)
             {
                 stringstream ss;
-                ss << "expected initialized codec context and its not there!!!";
+                ss << "Error decoding video frame";
                 throw app_fault( ss.str().c_str() );
             }
 
-            while( frame_ctr < size )
+            if( got_frame )
             {
-                int ret = 0;
-                int got_frame = 0;
+                T frame;
+                write_frame(frame_, &frame);
+            }
 
-                if( packet_temp_.size == 0 )
-                {
-                    /* read frames from the file */
-                    if( av_read_frame(format_context_, &packet_) >= 0 )
-                    {
-                        packet_temp_.size = packet_.size;
-                        packet_temp_.data = packet_.data;
-                        packet_temp_.stream_index = packet_.stream_index;
-                        packet_temp_.pts = packet_.pts;
-                        packet_temp_.dts = packet_.dts;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
+            packet_temp_.size -= ret;
+            packet_temp_.data += ret;
 
-                if (packet_temp_.stream_index == stream_idx_)
-                {
-                    //caux << "raw read frame:size:" << packet_.size  << ":pts:" << packet_.pts * av_q2d(codec_context->time_base) << endl;
-
-                    /* decode frame */
-                    ret = (*avcodec_decode_function_)(codec_context, frame_, &got_frame, &packet_temp_);
-                    if (ret < 0)
-                    {
-                        stringstream ss;
-                        ss << "Error decoding video frame";
-                        throw app_fault( ss.str().c_str() );
-                    }
-
-                    if( got_frame )
-                    {
-                        write_frame(&frames[ frame_ctr ]);
-                        ++frame_ctr;
-                    }
-
-                    packet_temp_.size -= ret;
-                    packet_temp_.data += ret;
-
-                    if( packet_temp_.size <= 0 )
-                    {
-                        av_free_packet( &packet_ );
-                        av_init_packet( &packet_ );
-                        packet_.size = 0;
-                        packet_.data = NULL;
-                        packet_temp_.size = 0;
-                        packet_temp_.data = NULL;
-                    }
-                }
-                else
-                {
-                    av_free_packet( &packet_ );
-                    av_init_packet( &packet_ );
-                    packet_.size = 0;
-                    packet_.data = NULL;
-                    packet_temp_.size = 0;
-                    packet_temp_.data = NULL;
-                }
+            if( packet_temp_.size <= 0 )
+            {
+                av_free_packet( &packet_ );
+                av_init_packet( &packet_ );
+                packet_.size = 0;
+                packet_.data = NULL;
+                packet_temp_.size = 0;
+                packet_temp_.data = NULL;
             }
         }
-        catch( app_fault& e )
+        else
         {
-            logger << e << endl;
-            return -1;
+            av_free_packet( &packet_ );
+            av_init_packet( &packet_ );
+            packet_.size = 0;
+            packet_.data = NULL;
+            packet_temp_.size = 0;
+            packet_temp_.data = NULL;
         }
-
-        return frame_ctr;
     }
+
+public:
 
     static logger_t logger;
 
@@ -310,6 +297,15 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
         caux << "decoder destroyed" << endl;
     }
 
+    void iter_frames(int start_at)
+    {
+        start_stream(start_at);
+
+        while(true)
+        {
+            iter_frame();
+        }
+    }
 };
 
 #endif

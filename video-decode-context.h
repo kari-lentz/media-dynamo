@@ -3,6 +3,7 @@
 
 #include "decode-context.h"
 #include "ring-buffer-video.h"
+#include "vwriter.h"
 #include <SDL/SDL.h>
 
 using namespace std;
@@ -23,13 +24,10 @@ private:
     ring_buffer_video_t* buffer_;
     SDL_Overlay* overlay_;
 
-    specific_streamer<video_decode_context, AME_VIDEO_FRAME> functor_;
-
     AVFormatContext* oc_;
     FILE* outfile_;
 
-    void write_frame(AME_VIDEO_FRAME* frame);
-    int decode_frames(AME_VIDEO_FRAME* frames, int size);
+    void write_frame(AVFrame* frame_in, AME_VIDEO_FRAME* frame_out);
 
 public:
 
