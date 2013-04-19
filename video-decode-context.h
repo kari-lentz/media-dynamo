@@ -27,7 +27,7 @@ private:
     AVFormatContext* oc_;
     FILE* outfile_;
 
-    void write_frame(AVFrame* frame_in, AME_VIDEO_FRAME* frame_out);
+    void write_frame(AVFrame* frame_in);
 
 public:
 

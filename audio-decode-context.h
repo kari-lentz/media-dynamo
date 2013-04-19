@@ -24,7 +24,7 @@ private:
 
     AVFormatContext* oc_;
 
-    void write_frame(AVFrame* frame_in, AME_AUDIO_FRAME* frame_out);
+    void write_frame(AVFrame* frame_in);
 
 public:
 

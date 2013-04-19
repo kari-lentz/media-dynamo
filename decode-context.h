@@ -159,7 +159,7 @@ protected:
         }
     }
 
-    virtual void write_frame(AVFrame* frame_in, T* frame_out)=0;
+    virtual void write_frame(AVFrame* frame_in)=0;
 
     void iter_frame()
     {
@@ -204,8 +204,7 @@ protected:
 
             if( got_frame )
             {
-                T frame;
-                write_frame(frame_, &frame);
+                write_frame(frame_);
             }
 
             packet_temp_.size -= ret;
