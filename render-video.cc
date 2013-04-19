@@ -33,10 +33,24 @@ bool render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
     return ret == 0;
 }
 
-render_video::render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):render(pbuffer), overlay_(overlay)
+render_video::render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):render(), pbuffer_(pbuffer), overlay_(overlay), functor_(this, &render_video::render_frames)
 {
 }
 
 render_video::~render_video()
 {
+}
+
+int render_video::operator()()
+{
+    do
+    {
+        pbuffer_->read_avail( &functor_ );
+
+        int delay = 20;
+        usleep( delay * 1000 );
+
+    }  while( !pbuffer_->is_done() );
+
+    return 0;
 }

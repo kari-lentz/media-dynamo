@@ -16,8 +16,11 @@ class render_video:public render<AME_VIDEO_FRAME>
 {
 private:
 
-    SDL_Surface* screen_;
+    ring_buffer_video_t* pbuffer_;
     SDL_Overlay* overlay_;
+
+    specific_streamer<render_video, AME_VIDEO_FRAME> functor_;
+    SDL_Surface* screen_;
 
 protected:
     bool render_frame_specific(AME_VIDEO_FRAME* pframe);
@@ -26,6 +29,8 @@ public:
 
     render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay);
     ~render_video();
+
+    int operator()();
 };
 
 #endif
