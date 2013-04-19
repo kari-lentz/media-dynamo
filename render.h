@@ -14,7 +14,7 @@ template <typename T> class render
 {
 protected:
 
-    virtual int render_frame_specific(T* pframe)=0;
+    virtual bool render_frame_specific(T* pframe)=0;
 
 private:
 

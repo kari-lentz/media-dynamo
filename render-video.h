@@ -20,7 +20,7 @@ private:
     SDL_Overlay* overlay_;
 
 protected:
-    int render_frame_specific(AME_VIDEO_FRAME* pframe);
+    bool render_frame_specific(AME_VIDEO_FRAME* pframe);
 
 public:
 
