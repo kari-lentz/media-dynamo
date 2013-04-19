@@ -14,25 +14,28 @@ template <typename T> class render
 {
 protected:
 
-    virtual int render_frame_specific(T* pframe)=0;
+    virtual bool render_frame_specific(T* pframe)=0;
 
 private:
 
-    Uint32 begin_tick_ms_;
     ring_buffer<T>* pbuffer_;
     specific_streamer<render,T> functor_;
-    bool error_p_;
+    Uint32* pbegin_tick_ms_;
 
     int render_frame(T* pframes, int num_frames)
     {
-        if( error_p_ ) return -1;
+        if(!pbegin_tick_ms_)
+        {
+            pbegin_tick_ms_ = new Uint32;
+            *pbegin_tick_ms_ = SDL_GetTicks();
+        }
 
         //find the lowest acceptable pts and play that
         //typically the highest out of the ones that are lower.
         //
         int highest_ms = 0;
         T* pframe_playable = NULL;
-        int media_ms = (int) (SDL_GetTicks() - begin_tick_ms_);
+        int media_ms = (int) (SDL_GetTicks() - *pbegin_tick_ms_);
 
         for( int idx = 0; idx < num_frames; ++idx )
         {
@@ -95,18 +98,16 @@ public:
 
     static logger_t logger;
 
-render(ring_buffer<T>* pbuffer):pbuffer_(pbuffer), functor_(this, &render<T>::call), error_p_(false){}
+render(ring_buffer<T>* pbuffer):pbuffer_(pbuffer), functor_(this, &render<T>::call), pbegin_tick_ms_(NULL){}
 
     ~render()
     {
+        if(pbegin_tick_ms_) delete pbegin_tick_ms_;
         render<T>::logger << "display destroyed" << endl;
     }
 
     int operator()()
     {
-        begin_tick_ms_ = SDL_GetTicks();
-        error_p_ = false;
-
         do
         {
             pbuffer_->read_avail( &functor_ );

@@ -4,15 +4,13 @@ using namespace std;
 
 template <> logger_t render<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
 
-int render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
+bool render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
 {
     SDL_LockYUVOverlay( overlay_ );
 
     memcpy(overlay_->pixels[ 0 ], pframe->data[ 0 ], overlay_->pitches[0] * overlay_->h);
     memcpy(overlay_->pixels[ 2 ], pframe->data[ 1 ], (overlay_->pitches[2] * overlay_->h) >> 1);
     memcpy(overlay_->pixels[ 1 ], pframe->data[ 2 ], (overlay_->pitches[1] * overlay_->h) >> 1);
-
-    pframe->played_p = true;
 
     SDL_UnlockYUVOverlay( overlay_ );
 
@@ -32,7 +30,7 @@ int render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
         throw app_fault( ss.str().c_str() );
     }
 
-    return ret;
+    return ret == 0;
 }
 
 render_video::render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):render(pbuffer), overlay_(overlay)
