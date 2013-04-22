@@ -27,6 +27,8 @@ static const unsigned long STDIN_MAX = 1000000;
 
 using namespace std;
 
+logger_t logger("VIDEO-PLAYER");
+
 static void* video_decode_context_thread(void *parg)
 {
     env_video_decode_context* penv = (env_video_decode_context*) parg;
@@ -143,12 +145,12 @@ int run_decode(const char* mp4_file_path)
     }
     catch (const std::ios_base::failure& e)
     {
-        render_video::logger << "Exception opening/reading file";
+        logger << "Exception opening/reading file";
         ret = -1;
     }
     catch (exception& e)
     {
-        render_video::logger << "Exception opening/reading file";
+        logger << "Exception opening/reading file";
         ret = -1;
     }
 

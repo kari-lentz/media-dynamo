@@ -2,8 +2,6 @@ using namespace std;
 
 #include "render-video.h"
 
-template <> logger_t render<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
-
 bool render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
 {
     SDL_LockYUVOverlay( overlay_ );
@@ -33,7 +31,12 @@ bool render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
     return ret == 0;
 }
 
-render_video::render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):render(), pbuffer_(pbuffer), overlay_(overlay), functor_(this, &render_video::render_frames)
+uint32_t render_video::get_media_ms()
+{
+    return SDL_GetTicks();
+}
+
+render_video::render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):render<AME_VIDEO_FRAME>( "VIDEO-PLAYER"), pbuffer_(pbuffer), overlay_(overlay), functor_(this, &render_video::render_frames)
 {
 }
 

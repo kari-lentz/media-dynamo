@@ -3,6 +3,7 @@
 
 #include "render.h"
 #include "ring-buffer-video.h"
+#include <SDL/SDL.h>
 
 typedef struct
 {
@@ -24,6 +25,7 @@ private:
 
 protected:
     bool render_frame_specific(AME_VIDEO_FRAME* pframe);
+    uint32_t get_media_ms();
 
 public:
 

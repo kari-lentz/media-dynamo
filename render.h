@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <SDL/SDL.h>
 #include "app-fault.h"
 #include "ring-buffer.h"
 #include "logger.h"
@@ -12,13 +11,18 @@ using namespace std;
 
 template <typename T> class render
 {
+protected:
+
+    logger_t logger_;
+
 private:
 
-    Uint32* pbegin_tick_ms_;
+    uint32_t* pbegin_tick_ms_;
 
 protected:
 
     virtual bool render_frame_specific(T* pframe)=0;
+    virtual uint32_t get_media_ms()=0;
 
     int render_frames(T* pframes, int num_frames)
     {
@@ -28,8 +32,8 @@ protected:
         {
             if(!pbegin_tick_ms_)
             {
-                pbegin_tick_ms_ = new Uint32;
-                *pbegin_tick_ms_ = SDL_GetTicks();
+                pbegin_tick_ms_ = new uint32_t;
+                *pbegin_tick_ms_ = get_media_ms();
             }
 
             //find the lowest acceptable pts and play that
@@ -37,7 +41,7 @@ protected:
             //
             int highest_ms = 0;
             T* pframe_playable = NULL;
-            int media_ms = (int) (SDL_GetTicks() - *pbegin_tick_ms_);
+            int media_ms = (int) (get_media_ms() - *pbegin_tick_ms_);
 
             for( int idx = 0; idx < num_frames; ++idx )
             {
@@ -80,7 +84,7 @@ protected:
         }
         catch( app_fault& e )
         {
-            logger << e;
+            logger_ << e;
             return -1;
         }
 
@@ -92,12 +96,12 @@ public:
 
     static logger_t logger;
 
-render():pbegin_tick_ms_(NULL){}
+render(const char* logging_context):logger_(logging_context),pbegin_tick_ms_(NULL){}
 
     ~render()
     {
         if(pbegin_tick_ms_) delete pbegin_tick_ms_;
-        render<T>::logger << "display destroyed" << endl;
+
     }
 
 };
