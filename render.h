@@ -21,8 +21,8 @@ private:
 
 protected:
 
-    virtual bool render_frame_specific(T* pframe)=0;
     virtual uint32_t get_media_ms()=0;
+    virtual bool render_frame_specific(T* pframe)=0;
 
     int render_frames(T* pframes, int num_frames)
     {

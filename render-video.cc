@@ -2,6 +2,8 @@ using namespace std;
 
 #include "render-video.h"
 
+template <> logger_t render<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
+
 bool render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
 {
     SDL_LockYUVOverlay( overlay_ );
