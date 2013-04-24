@@ -22,7 +22,9 @@ template <> logger_t decode_context<AME_AUDIO_FRAME>::logger("AUDIO-PLAYER");
 
 void audio_decode_context::write_frame(AVFrame* frame_in)
 {
-
+    //copy from ffmpeg native format to the 44100 format for ALSA
+    //
+    STEREO_AUDIO_FRAME frame_stereo;
     AME_AUDIO_FRAME frame_out;
 
     struct SwrContext* ctx;
@@ -39,17 +41,23 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
 
     if( ctx )
     {
-        frame_out.data[0] = &frame_out.raw_data[0];
+        frame_stereo.data[0] = &frame_stereo.raw_data[0][0];
 
         int ret = 0;
         do
         {
 
             ret = swr_convert( ctx,
-                               (uint8_t**) frame_out.data,
-                               AUDIO_FRAME_SIZE,
+                               (uint8_t**) frame_stereo.data,
+                               AUDIO_PACKET_SIZE,
                                (const uint8_t**) frame_in->extended_data,
                                frame_in->nb_samples);
+
+            //now down mix
+            for(int sample = 0; sample < ret; ++sample)
+            {
+                frame_out.raw_data[sample][0] = frame_stereo.raw_data[sample][0] + frame_stereo.raw_data[sample][1];
+            }
 
             frame_out.samples = ret;
 
@@ -63,7 +71,7 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
             int ret = vwriter<AME_AUDIO_FRAME>(buffer_)(&frame_out, 1);
             if( ret ) throw decode_done_t();
 
-        } while (ret == AUDIO_FRAME_SIZE);
+        } while (ret == AUDIO_PACKET_SIZE);
 
         swr_free(&ctx);
     }
@@ -72,18 +80,17 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
         logger << "no sample context allocated" << endl;
     }
 
-    //memcpy( frame_out->data, frame_in->data, 4 * sizeof( short ) );
-
     int best_pts = av_frame_get_best_effort_timestamp(frame_) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
     //int pkt_pts = frame_->pkt_dts * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
     frame_out.pts_ms = best_pts;
     frame_out.played_p = false;
     frame_out.skipped_p = false;
 
-    //caux << "decode frame:pts_ms:" << best_pts << ":"  << pkt_pts << endl;
+    int ret = vwriter<AME_AUDIO_FRAME>(buffer_, false)( &frame_out, 1);
+    if( ret <= 0 ) throw decode_done_t();
 }
 
-audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4),buffer_( ring_buffer )
+audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer, int channel):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4),buffer_( &ring_buffer[channel] )
 {
 }
 

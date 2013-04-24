@@ -38,7 +38,7 @@ uint32_t render_video::get_media_ms()
     return SDL_GetTicks();
 }
 
-render_video::render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):render<AME_VIDEO_FRAME>( "VIDEO-PLAYER"), pbuffer_(pbuffer), overlay_(overlay), functor_(this, &render_video::render_frames)
+render_video::render_video(ring_buffer_video_t* pbuffer, SDL_Overlay* overlay):render<AME_VIDEO_FRAME>( "VIDEO-PLAYER"), pbuffer_(pbuffer), overlay_(overlay), functor_(this, &render_video::render_earliest_frame)
 {
 }
 

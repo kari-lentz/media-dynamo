@@ -21,10 +21,10 @@ private:
 
 protected:
 
-    virtual uint32_t get_media_ms()=0;
     virtual bool render_frame_specific(T* pframe)=0;
+    virtual uint32_t get_media_ms()=0;
 
-    int render_frames(T* pframes, int num_frames)
+    int render_earliest_frame(T* pframes, int num_frames)
     {
         int ret = 0;
 
@@ -88,8 +88,39 @@ protected:
             return -1;
         }
 
-
         return ret;
+    }
+
+    int render_all_frames(T* pframes, int num_frames)
+    {
+        int frame_ctr = 0;
+
+        try
+        {
+            //find the lowest acceptable pts and play that
+            //typically the highest out of the ones that are lower.
+            //
+            for(int idx = 0; idx < num_frames; ++idx)
+            {
+                T* pframe = &pframes[idx];
+
+                //populate the data with a playable frame in the ring buffer if it exists
+                //
+                if( !pframe->played_p )
+                {
+                    if( render_frame_specific(pframe)) pframe->played_p = true;
+                }
+
+                ++frame_ctr;
+            }
+        }
+        catch( app_fault& e )
+        {
+            logger_ << e;
+            return -1;
+        }
+
+        return frame_ctr;
     }
 
 public:

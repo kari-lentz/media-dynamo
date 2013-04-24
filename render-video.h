@@ -1,14 +1,17 @@
 #ifndef RENDER_VIDEO_H
 #define RENDER_VIDEO_H
 
+#include <SDL/SDL.h>
 #include "render.h"
 #include "ring-buffer-video.h"
-#include <SDL/SDL.h>
+#include "synch.h"
 
 typedef struct
 {
     ring_buffer_video_t* ring_buffer;
     SDL_Overlay* overlay;
+    ready_synch_t* audio_ready;
+    ready_synch_t* video_ready;
     bool debug_p;
     int ret;
 } env_render_video_context;

@@ -18,8 +18,10 @@ static const unsigned long STDIN_MAX = 1000000;
 #include <SDL/SDL.h>
 
 #include "env-writer.h"
+#include "audio-decode-context.h"
 #include "video-decode-context.h"
 #include "render-video.h"
+#include "render-audio.h"
 #include "video-player.h"
 #include "sdl-holder.h"
 
@@ -28,6 +30,35 @@ static const unsigned long STDIN_MAX = 1000000;
 using namespace std;
 
 logger_t logger("VIDEO-PLAYER");
+
+int getenv_numeric( const char* szname, int default_val )
+{
+    bool numeric_p = false;
+    char* szvalue = getenv( szname );
+
+    if( szvalue && szvalue[0] != '\0' )
+    {
+        numeric_p = true;
+
+        for(int i = 0; szvalue[ i ] != '\0'; i++ )
+	{
+            if( !(szvalue[ i ] >= '0' && szvalue[i] <= '9') )
+	    {
+                numeric_p = false;
+                break;
+	    }
+	}
+    }
+
+    return numeric_p ? atoi( szvalue ):default_val;
+}
+
+string getenv_string( const char* szname, const char* szdefault )
+{
+    char* szvalue = getenv( szname );
+
+    return ( szvalue && szvalue[0] != '\0' )  ? szvalue : szdefault;
+}
 
 static void* video_decode_context_thread(void *parg)
 {
@@ -39,10 +70,6 @@ static void* video_decode_context_thread(void *parg)
         vdc();
         caux_video << "decode operation complete" << endl;
         penv->ret = 0;
-
-        SDL_Event event;
-        event.type = MY_DONE;
-        SDL_PushEvent(&event);
     }
     catch( app_fault& e )
     {
@@ -59,6 +86,48 @@ static void* video_decode_context_thread(void *parg)
         penv->ret = -1;
         decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
     }
+
+    SDL_Event event;
+    event.type = MY_DONE;
+    SDL_PushEvent(&event);
+
+    return &penv->ret;
+}
+
+static void* audio_decode_context_thread(void *parg)
+{
+    env_audio_decode_context* penv = (env_audio_decode_context*) parg;
+
+    try
+    {
+        if( !penv->buffer_ready->wait() )
+        {
+            throw app_fault("premature end of audio decode");
+        }
+        audio_decode_context adc(penv->mp4_file_path, penv->ring_buffer, 0);
+        adc();
+        caux_audio << "decode operation complete" << endl;
+        penv->ret = 0;
+    }
+    catch( app_fault& e )
+    {
+        penv->ret = -1;
+        decode_context<AME_AUDIO_FRAME>::logger << "caught exception:" << e << endl;
+    }
+    catch (const std::ios_base::failure& e)
+    {
+        penv->ret = -1;
+        decode_context<AME_AUDIO_FRAME>::logger << "Exception opening/reading file" << endl;
+    }
+    catch (exception& e)
+    {
+        penv->ret = -1;
+        decode_context<AME_AUDIO_FRAME>::logger << "Exception opening/reading file" << endl;
+    }
+
+    SDL_Event event;
+    event.type = MY_DONE;
+    SDL_PushEvent(&event);
 
     return &penv->ret;
 }
@@ -70,13 +139,17 @@ static void* render_video_thread(void *parg)
     try
     {
         render_video rv(penv->ring_buffer, penv->overlay);
+
+        penv->video_ready->signal(true);
+        if( !penv->audio_ready->wait() )
+        {
+            throw app_fault("premature end of render video");
+        }
+
         rv();
+
         caux_video << "display complete" << endl;
         penv->ret = 0;
-
-        SDL_Event event;
-        event.type = MY_DONE;
-        SDL_PushEvent(&event);
     }
     catch( app_fault& e )
     {
@@ -94,38 +167,142 @@ static void* render_video_thread(void *parg)
         decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
     }
 
+    SDL_Event event;
+    event.type = MY_DONE;
+    SDL_PushEvent(&event);
+
+    return &penv->ret;
+}
+
+static void* render_audio_thread(void *parg)
+{
+    env_render_audio_context* penv = (env_render_audio_context*) parg;
+
+    try
+    {
+        //run place constructor over ring buffer
+        //
+        alsa_engine<4> ae(penv->alsa_dev.c_str(), penv->periods_alsa, penv->wait_timeout, penv->ring_buffers);
+        penv->frames_per_period = ae.handshake( penv->frames_per_period );
+        if( penv->frames_per_period  > 0 )
+        {
+            for( int channel = 0; channel < penv->num_channels; channel++ )
+            {
+                new ( &penv->ring_buffers[ channel ] ) ring_buffer_audio_t ( penv->frames_per_period / AUDIO_PACKET_SIZE, penv->periods_mpeg );
+            }
+
+            penv->buffer_ready->signal(true);
+        }
+        else
+        {
+            throw app_fault( "could not do ALSA handshake" );
+        }
+
+        penv->audio_ready->signal(true);
+        if( !penv->video_ready->wait() )
+        {
+            throw app_fault( "premature end of render audio" );
+        }
+
+        penv->ret = ae();
+    }
+    catch( app_fault& e )
+    {
+        penv->ret = -1;
+        decode_context<AME_VIDEO_FRAME>::logger << "caught exception:" << e << endl;
+    }
+    catch (const std::ios_base::failure& e)
+    {
+        penv->ret = -1;
+        decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
+    }
+    catch (exception& e)
+    {
+        penv->ret = -1;
+        decode_context<AME_VIDEO_FRAME>::logger << "Exception opening/reading file" << endl;
+    }
+
+    SDL_Event event;
+    event.type = MY_DONE;
+    SDL_PushEvent(&event);
+
     return &penv->ret;
 }
 
 int run_decode(const char* mp4_file_path)
 {
-    ring_buffer_video_t ring_buffer(24,  6);
+    int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", 854);
+    int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", 480);
+
+    string ALSA_DEV = getenv_string( "ALSA_DEV", "hw:0,0" );
+    int NUM_CHANNELS = getenv_numeric( "NUM_CHANNELS", 4 );
+    int PERIODS_ALSA = getenv_numeric( "PERIODS_ALSA", 8 );
+    int PERIODS_MPEG = getenv_numeric( "PERIODS_MPEG", 128 );
+    int FRAMES_PER_PERIOD = getenv_numeric( "FRAMES_PER_PERIOD", 1024 );
+    int WAIT_TIMEOUT = getenv_numeric( "WAIT_TIMEOUT", 2000 );
+
+    ring_buffer_video_t ring_buffer_video(24,  6);
     env_video_decode_context env_vdc;
     env_render_video_context env_render_video;
+    env_audio_decode_context env_adc;
+    env_render_audio_context env_render_audio;
+
+    synch_t< bool >  buffer_ready(false);
+    synch_t< bool > audio_ready;
+    synch_t< bool > video_ready;
+
     int ret = 0;
-    pthread_t thread_fc, thread_render_video;
+    pthread_t thread_vfc, thread_afc, thread_render_video, thread_render_audio;
 
     try
     {
-        sdl_holder sdl(854, 480, &thread_fc, &thread_render_video);
+        sdl_holder sdl(VIDEO_WIDTH, VIDEO_HEIGHT, NUM_CHANNELS, &thread_vfc, &thread_afc, &thread_render_video, &thread_render_audio);
+
+        //set up the video decode
+        //
 
         env_vdc.mp4_file_path = mp4_file_path;
         env_vdc.overlay = sdl.get_overlay();
         env_vdc.start_at = 0;
-        env_vdc.ring_buffer = &ring_buffer;
+        env_vdc.ring_buffer = &ring_buffer_video;
         env_vdc.ret = 0;
 
-        int ret = pthread_create( &thread_fc, NULL, &video_decode_context_thread, &env_vdc );
+        ret = pthread_create( &thread_vfc, NULL, &video_decode_context_thread, &env_vdc );
 
         if( ret < 0 )
         {
             stringstream ss;
-            ss << "file thread create error:"  << strerror( ret );
+            ss << "video file thread create error:"  << strerror( ret );
             throw app_fault( ss.str().c_str() );
         }
 
-        env_render_video.ring_buffer = &ring_buffer;
+        //set up the audio decode
+        //
+
+        ring_buffer_audio_t pcm_buffers[ 4  ];
+
+        env_adc.mp4_file_path = mp4_file_path;
+        env_adc.start_at = 0;
+        env_adc.ring_buffer = &pcm_buffers[ 0 ];
+        env_adc.buffer_ready = &buffer_ready;
+        env_adc.ret = 0;
+
+        ret = pthread_create( &thread_vfc, NULL, &audio_decode_context_thread, &env_adc );
+
+        if( ret < 0 )
+        {
+            stringstream ss;
+            ss << "audio file thread create error:"  << strerror( ret );
+            throw app_fault( ss.str().c_str() );
+        }
+
+        env_render_video.ring_buffer = &ring_buffer_video;
         env_render_video.overlay = sdl.get_overlay();
+        env_render_video.audio_ready = &audio_ready;
+        env_render_video.video_ready = &video_ready;
+
+        //set up the render video
+        //
 
         ret = pthread_create( &thread_render_video, NULL, &render_video_thread, &env_render_video );
 
@@ -136,7 +313,33 @@ int run_decode(const char* mp4_file_path)
             throw app_fault( ss.str().c_str() );
         }
 
-        sdl.message_loop(ring_buffer);
+        //set up the audio rendering
+        //
+
+        env_render_audio.ring_buffers = &pcm_buffers[0];
+        env_render_audio.alsa_dev = ALSA_DEV;
+        env_render_audio.num_channels = NUM_CHANNELS;
+        env_render_audio.periods_alsa = PERIODS_ALSA;
+        env_render_audio.wait_timeout = WAIT_TIMEOUT;
+        env_render_audio.frames_per_period = FRAMES_PER_PERIOD;
+        env_render_audio.periods_mpeg = PERIODS_MPEG;
+        env_render_audio.buffer_ready = &buffer_ready;
+        env_render_audio.audio_ready = &audio_ready;
+        env_render_audio.video_ready = &video_ready;
+        env_render_audio.debug_p = false;
+
+        ret = pthread_create( &thread_render_audio, NULL, &render_audio_thread, &env_render_audio );
+
+        if( ret < 0 )
+        {
+            stringstream ss;
+            ss << "render audio thread create error:"  << strerror( ret );
+            throw app_fault( ss.str().c_str() );
+        }
+
+        //main SDL loop for everything
+        //
+        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &video_ready, &audio_ready);
     }
     catch(app_fault& e)
     {

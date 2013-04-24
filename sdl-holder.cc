@@ -2,7 +2,7 @@
 
 logger_t sdl_holder::logger("VIDEO-PLAYER");
 
-sdl_holder::sdl_holder(int width, int height, pthread_t* pthread_fc, pthread_t* pthread_display):pthread_fc_(pthread_fc),pthread_display_(pthread_display),surface_(0),overlay_(0)
+sdl_holder::sdl_holder(int width, int height, int num_audio_zones, pthread_t* pthread_vfc, pthread_t* pthread_afc, pthread_t* pthread_render_video, pthread_t* pthread_render_audio):num_audio_zones_(num_audio_zones), pthread_vfc_(pthread_vfc), pthread_afc_(pthread_afc),pthread_render_video_(pthread_render_video), pthread_render_audio_(pthread_render_audio), surface_(0), overlay_(0)
 {
     surface_ = SDL_SetVideoMode(width, height, 0, SDL_HWSURFACE | SDL_RESIZABLE | SDL_ASYNCBLIT | SDL_HWACCEL);
     if(!surface_)
@@ -26,8 +26,11 @@ sdl_holder::~sdl_holder()
 {
     logger << "will wait for secondary thread completion" << endl;
 
-    pthread_join( *pthread_display_, NULL );
-    pthread_join( *pthread_fc_, NULL );
+    pthread_join( *pthread_render_video_, NULL );
+    pthread_join( *pthread_render_audio_, NULL );
+
+    pthread_join( *pthread_vfc_, NULL );
+    pthread_join( *pthread_afc_, NULL );
     logger << "all secondary threads down" << endl;
 
     if( overlay_ ) SDL_FreeYUVOverlay( overlay_ );
@@ -46,7 +49,7 @@ SDL_Surface* sdl_holder::get_surface()
     return surface_;
 }
 
-void sdl_holder::message_loop(ring_buffer_video_t& ring_buffer)
+void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, ready_synch_t* buffer_ready, ready_synch_t* video_ready, ready_synch_t* audio_ready)
 {
     SDL_Event event;
     bool done_p = false;
@@ -63,7 +66,17 @@ void sdl_holder::message_loop(ring_buffer_video_t& ring_buffer)
         case MY_DONE:
         case SDL_QUIT:
             logger << "The primary quit event detected" << endl;
-            ring_buffer.close_out();
+            ring_buffer_video->close_out();
+
+            for(int idx = 0; idx < num_audio_zones_; ++idx)
+            {
+                (&ring_buffers_audio[ idx ])->close_out();
+            }
+
+            buffer_ready->signal( false );
+            video_ready->signal( false );
+            audio_ready->signal( false );
+
             done_p = true;
             break;
         }

@@ -16,7 +16,7 @@ LDLIBS := $(shell pkg-config --libs $(LIBS)) $(LDLIBS)
 
 CPPFLAGS =  -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -pthread -Wall -Werror -g -Iinclude
 
-INC := app-fault.h ring-buffer.h ring-buffer-video.h ring-buffer-audio.h vwriter.h null-stream.h env-writer.h
+INC := app-fault.h ring-buffer.h ring-buffer-video.h ring-buffer-audio.h unix-result.h result.h synch.h vwriter.h null-stream.h env-writer.h
 
 #
 # Link commands
@@ -27,7 +27,7 @@ $(TARGET) : $(OBJECTS)
 #
 # Compile commands
 #
-video-player.o : video-player.cc video-player.h video-decode-context.h decode-context.h ffmpeg-headers.h $(INC)
+video-player.o : video-player.cc video-player.h video-decode-context.h audio-decode-context.h decode-context.h render-video.h alsa-engine.h alsa-result.h ffmpeg-headers.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o video-player.o $(FLAGS_MYSQL) video-player.cc
 
 sdl-holder.o : sdl-holder.cc sdl-holder.h
