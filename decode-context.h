@@ -123,17 +123,17 @@ protected:
         remaining_stream_bytes_ = 0;
         error_p_ = false;
 
-        caux << "seek audio for:" << mp4_file_path_.c_str() << endl;
+        caux << "seek for for:" << mp4_file_path_.c_str() << ":stream_idx_:" << stream_idx_ << endl;
 
         /* open input file, and allocate format context */
         if (avformat_open_input(&format_context_, mp4_file_path_.c_str(), NULL, NULL) < 0)
         {
             stringstream ss;
-            ss << "Could not open source file" << mp4_file_path_;
+            ss << "Could not open source file" << mp4_file_path_ << ":stream_idx_:" << stream_idx_;
             throw app_fault( ss.str().c_str() );
         }
 
-        caux << "opened input file:" << mp4_file_path_ << endl;
+        caux << "opened input file:" << mp4_file_path_ << ":stream_idx_:" << stream_idx_ << endl;
 
         /* retrieve stream information */
         if (avformat_find_stream_info(format_context_, NULL) < 0)
@@ -145,7 +145,7 @@ protected:
 
         open_codec_context(&stream_idx_, format_context_, type_);
 
-        caux << "opened codec context" << endl;
+        caux << "opened codec context" << ":stream_idx_:" << stream_idx_ << endl;
 
         if( !frame_ )
         {
@@ -153,7 +153,7 @@ protected:
             if (!frame_)
             {
                 stringstream ss;
-                ss << "Could not allocate frame";
+                ss << "Could not allocate frame" << ":stream_idx_:" << stream_idx_;
                 throw app_fault( ss.str().c_str() );
             }
         }
@@ -266,7 +266,7 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
     {
         av_free_packet( &packet_ );
         av_free_packet( &packet_temp_ );
-        caux << "closing file context" << endl;
+        caux << "closing file context for stream idx:" << stream_idx_ << endl;
 
         if( frame_ )
         {
@@ -293,17 +293,21 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
             avformat_free_context(format_context_);
         }
 
-        caux << "decoder destroyed" << endl;
+        caux << "decoder destroyed stream idx:" << stream_idx_ << endl;
     }
 
     void iter_frames(int start_at)
     {
         start_stream(start_at);
 
+        caux << "STARTED ITERATING for stream_idx:" << stream_idx_ << endl;
+
         while(true)
         {
             iter_frame();
         }
+
+        caux << "DONE ITERATING for stream_idx:" << stream_idx_ << endl;
     }
 };
 

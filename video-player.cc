@@ -60,6 +60,51 @@ string getenv_string( const char* szname, const char* szdefault )
     return ( szvalue && szvalue[0] != '\0' )  ? szvalue : szdefault;
 }
 
+static int lockmgr(void **arg, enum AVLockOp op)
+{
+    int ret;
+
+   switch(op)
+   {
+   case AV_LOCK_CREATE:
+   {
+       pthread_mutex_t* pmtx = new pthread_mutex_t;
+       *arg = pmtx;
+       if( pthread_mutex_init(pmtx, NULL) != 0 )
+           ret=1;
+       else
+           ret=0;
+       break;
+   }
+   case AV_LOCK_OBTAIN:
+   {
+       pthread_mutex_t* pmtx = (pthread_mutex_t*) *arg;
+       ret = !!pthread_mutex_lock(pmtx);
+       break;
+   }
+   case AV_LOCK_RELEASE:
+   {
+       pthread_mutex_t* pmtx = (pthread_mutex_t*) *arg;
+       ret =  !!pthread_mutex_unlock(pmtx);
+       break;
+   }
+   case AV_LOCK_DESTROY:
+   {
+       pthread_mutex_t* pmtx = (pthread_mutex_t*) *arg;
+       pthread_mutex_destroy(pmtx);
+       ret = 0;
+       break;
+   }
+   default:
+   {
+       ret = 1;
+       break;
+   }
+   }
+
+   return ret;
+}
+
 static void* video_decode_context_thread(void *parg)
 {
     env_video_decode_context* penv = (env_video_decode_context*) parg;
@@ -287,7 +332,7 @@ int run_decode(const char* mp4_file_path)
         env_adc.buffer_ready = &buffer_ready;
         env_adc.ret = 0;
 
-        ret = pthread_create( &thread_vfc, NULL, &audio_decode_context_thread, &env_adc );
+        ret = pthread_create( &thread_afc, NULL, &audio_decode_context_thread, &env_adc );
 
         if( ret < 0 )
         {
@@ -364,13 +409,21 @@ int main(int argc, char *argv[])
 {
    av_register_all();
 
+   if (av_lockmgr_register(lockmgr))
+   {
+       logger << "Could not initialize lock manager!" << endl;;
+       return -1;
+   }
+
   if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER))
   {
-      fprintf(stderr, "Could not initialize SDL - %s\n", SDL_GetError());
-      exit(1);
+      logger << "Could not initialize SDL - " << SDL_GetError();
+      return -1;
   }
 
   int ret = run_decode( "/mnt/MUSIC-THD/test.hd.mp4" );
+
+  av_lockmgr_register(NULL);
 
   SDL_Quit();
 
