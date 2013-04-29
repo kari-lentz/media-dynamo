@@ -13,6 +13,7 @@ typedef struct
     int start_at;
     ring_buffer_audio_t* ring_buffer;
     ready_synch_t* buffer_ready;
+    bool run_p;
     bool debug_p;
     int ret;
 } env_audio_decode_context;

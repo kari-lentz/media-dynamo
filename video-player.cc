@@ -112,7 +112,7 @@ static void* video_decode_context_thread(void *parg)
     try
     {
         video_decode_context vdc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
-        vdc();
+        if(penv->run_p) vdc();
         caux_video << "decode operation complete" << endl;
         penv->ret = 0;
     }
@@ -150,7 +150,7 @@ static void* audio_decode_context_thread(void *parg)
             throw app_fault("premature end of audio decode");
         }
         audio_decode_context adc(penv->mp4_file_path, penv->ring_buffer, 0);
-        adc();
+        if(penv->run_p) adc();
         caux_audio << "decode operation complete" << endl;
         penv->ret = 0;
     }
@@ -172,7 +172,7 @@ static void* audio_decode_context_thread(void *parg)
 
     SDL_Event event;
     event.type = MY_DONE;
-    SDL_PushEvent(&event);
+    if(penv->run_p) SDL_PushEvent(&event);
 
     return &penv->ret;
 }
@@ -191,7 +191,7 @@ static void* render_video_thread(void *parg)
             throw app_fault("premature end of render video");
         }
 
-        rv();
+        if(penv->run_p) rv();
 
         caux_video << "display complete" << endl;
         penv->ret = 0;
@@ -249,7 +249,7 @@ static void* render_audio_thread(void *parg)
             throw app_fault( "premature end of render audio" );
         }
 
-        penv->ret = ae();
+        if( penv->run_p ) penv->ret = ae();
     }
     catch( app_fault& e )
     {
@@ -269,12 +269,12 @@ static void* render_audio_thread(void *parg)
 
     SDL_Event event;
     event.type = MY_DONE;
-    SDL_PushEvent(&event);
+    if(penv->run_p) SDL_PushEvent(&event);
 
     return &penv->ret;
 }
 
-int run_decode(const char* mp4_file_path)
+int run_play(const char* mp4_file_path)
 {
     int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", 854);
     int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", 480);
@@ -310,6 +310,7 @@ int run_decode(const char* mp4_file_path)
         env_vdc.overlay = sdl.get_overlay();
         env_vdc.start_at = 0;
         env_vdc.ring_buffer = &ring_buffer_video;
+        env_vdc.run_p = true;
         env_vdc.ret = 0;
 
         ret = pthread_create( &thread_vfc, NULL, &video_decode_context_thread, &env_vdc );
@@ -330,6 +331,7 @@ int run_decode(const char* mp4_file_path)
         env_adc.start_at = 0;
         env_adc.ring_buffer = &pcm_buffers[ 0 ];
         env_adc.buffer_ready = &buffer_ready;
+        env_adc.run_p = true;
         env_adc.ret = 0;
 
         ret = pthread_create( &thread_afc, NULL, &audio_decode_context_thread, &env_adc );
@@ -345,6 +347,7 @@ int run_decode(const char* mp4_file_path)
         env_render_video.overlay = sdl.get_overlay();
         env_render_video.audio_ready = &audio_ready;
         env_render_video.video_ready = &video_ready;
+        env_render_video.run_p = true;
 
         //set up the render video
         //
@@ -371,6 +374,7 @@ int run_decode(const char* mp4_file_path)
         env_render_audio.buffer_ready = &buffer_ready;
         env_render_audio.audio_ready = &audio_ready;
         env_render_audio.video_ready = &video_ready;
+        env_render_audio.run_p = true;
         env_render_audio.debug_p = false;
 
         ret = pthread_create( &thread_render_audio, NULL, &render_audio_thread, &env_render_audio );
@@ -421,7 +425,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int ret = run_decode( "/mnt/MUSIC-THD/test.hd.mp4" );
+    int ret = run_play( "/mnt/MUSIC-THD/test.hd.mp4" );
 
     av_lockmgr_register(NULL);
 

@@ -57,11 +57,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     frame_out.played_p = false;
     frame_out.skipped_p = false;
 
-    caux_video << "VIDEO DECODDED FRAME at:" << best_pts << endl;
-
     int ret = vwriter<AME_VIDEO_FRAME>(buffer_, false)( &frame_out, 1);
-
-    caux_video << "VIDEO DONE DECODDED FRAME at:" << best_pts << ":" << ret << endl;
 
     if( ret <= 0 ) throw decode_done_t();
 }

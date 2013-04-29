@@ -29,6 +29,8 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
 
     struct SwrContext* ctx;
 
+    caux_video << "AUDIO TRULY BEGIN DECODDE FRAME" << endl;
+
     ctx = swr_alloc_set_opts ( NULL,
                                av_get_default_channel_layout( 2 ),
                                AV_SAMPLE_FMT_S16,
@@ -46,7 +48,6 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
         int ret = 0;
         do
         {
-
             ret = swr_convert( ctx,
                                (uint8_t**) frame_stereo.data,
                                AUDIO_PACKET_SIZE,
@@ -86,7 +87,10 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
     frame_out.played_p = false;
     frame_out.skipped_p = false;
 
+    caux_video << "AUDIO BEGIN DECODDE FRAME at:" << best_pts << endl;
     int ret = vwriter<AME_AUDIO_FRAME>(buffer_, false)( &frame_out, 1);
+    caux_video << "AUDIO END DECODDE FRAME at:" << best_pts << ":" << ret << endl;
+
     if( ret <= 0 ) throw decode_done_t();
 }
 

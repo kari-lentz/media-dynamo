@@ -15,6 +15,7 @@ typedef struct
     ring_buffer_video_t* ring_buffer;
     SDL_Overlay* overlay;
     bool debug_p;
+    bool run_p;
     int ret;
 } env_video_decode_context;
 
