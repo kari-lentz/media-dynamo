@@ -14,6 +14,7 @@ class logger_base_t
     string identity_;
     int priority_;
     int facility_;
+    int thread_id_;
 
     stringstream ss_;
 
@@ -38,6 +39,7 @@ logger_base_t( const char* identity, int zone, int priority, int facility ):prio
 	}
 
         identity_ = ss.str();
+        thread_id_ = pthread_self();
     }
 
     template <typename T> friend logger_base_t& operator << (logger_base_t& logger, const T& t)

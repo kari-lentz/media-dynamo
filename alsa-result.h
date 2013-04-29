@@ -17,13 +17,6 @@ public:
 alsa_result():result(){}
 alsa_result( const char* szdoc, int ires ): result( szdoc, ires ){};
 
-    operator string ()
-    {
-        stringstream sstr;
-        sstr << "ALSA:" << (smisc_.empty() ?  ( iresult_ >= 0 ? " Ok" : snd_strerror( iresult_ ) ) : smisc_);
-        return sstr.str();
-    }
-
     bool operator()( const char* szop, int iresult, const char* szmisc = NULL)
     {
         sop_ = szop;
@@ -43,6 +36,17 @@ alsa_result( const char* szdoc, int ires ): result( szdoc, ires ){};
         return iresult_;
     }
 
+    friend ostream& operator << (ostream& os, alsa_result& ar)
+    {
+        os << "ALSA:" << (ar.smisc_.empty() ?  ( ar.iresult_ >= 0 ? " Ok" : snd_strerror( ar.iresult_ ) ) : ar.smisc_);
+        return os;
+    }
+
+    friend stringstream& operator << (stringstream& ss, alsa_result& ar)
+    {
+        ss << "ALSA:" << (ar.smisc_.empty() ?  ( ar.iresult_ >= 0 ? " Ok" : snd_strerror( ar.iresult_ ) ) : ar.smisc_);
+        return ss;
+    }
 };
 
 #endif
