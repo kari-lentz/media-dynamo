@@ -407,27 +407,27 @@ int run_decode(const char* mp4_file_path)
 
 int main(int argc, char *argv[])
 {
-   av_register_all();
+    av_register_all();
 
-   if (av_lockmgr_register(lockmgr))
-   {
-       logger << "Could not initialize lock manager!" << endl;;
-       return -1;
-   }
+    if (av_lockmgr_register(lockmgr))
+    {
+        logger << "Could not initialize lock manager!" << endl;
+        return -1;
+    }
 
-  if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER))
-  {
-      logger << "Could not initialize SDL - " << SDL_GetError();
-      return -1;
-  }
+    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER))
+    {
+        logger << "Could not initialize SDL - " << SDL_GetError();
+        return -1;
+    }
 
-  int ret = run_decode( "/mnt/MUSIC-THD/test.hd.mp4" );
+    int ret = run_decode( "/mnt/MUSIC-THD/test.hd.mp4" );
 
-  av_lockmgr_register(NULL);
+    av_lockmgr_register(NULL);
 
-  SDL_Quit();
+    SDL_Quit();
 
-  sdl_holder::logger << "final bye" << endl;
+    sdl_holder::logger << "final bye" << endl;
 
-  return ret;
+    return ret;
 }

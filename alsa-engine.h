@@ -101,7 +101,10 @@ public:
 
         logger_ << "beginning ALSA handshake:" << sdev_.c_str() << endl;
 
-        if( !state( "snd_pcm_open", snd_pcm_open(&ppcm_, sdev_.c_str(), SND_PCM_STREAM_PLAYBACK, 0) ) ) goto snd_pcm_nothing;
+        static snd_output_t* output;
+        if( !state( "snd_output_stdio", snd_output_stdio_attach(&output, stdout, 0) ) ) goto snd_pcm_nothing;
+
+        if( !state( "snd_pcm_open", snd_pcm_open(&ppcm_, sdev_.c_str(), SND_PCM_STREAM_PLAYBACK, 0) ) ) goto snd_pcm_attached;
 
         logger_ << state << endl;
 
@@ -176,6 +179,7 @@ public:
     snd_pcm_sw_params_allocated:  snd_pcm_sw_params_free( pswparams );
     snd_pcm_hw_params_allocated:  snd_pcm_hw_params_free( phwparams );
     snd_pcm_opened:  snd_pcm_close( ppcm_ );
+    snd_pcm_attached:
     snd_pcm_nothing:  frames_per_period_ = 0;
 
         err_logger_ << state << endl;
