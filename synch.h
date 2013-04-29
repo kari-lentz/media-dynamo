@@ -33,7 +33,8 @@ synch_t(T v):v_(v)
         T ret;
 
         pthread_mutex_lock(&mutex_);
-        if(!v_)
+        ret = v_;
+        if(!ret)
         {
             pthread_cond_wait(&cond_, &mutex_);
             ret = v_;
