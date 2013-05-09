@@ -22,12 +22,16 @@ class audio_decode_context:public decode_context<AME_AUDIO_FRAME>
 {
 private:
     ring_buffer_audio_t* buffer_;
+    int frame_out_idx_;
+    AME_AUDIO_FRAME frame_out_;
 
     specific_streamer<audio_decode_context, AME_AUDIO_FRAME> functor_;
 
     AVFormatContext* oc_;
 
+    int write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRAME& frame_out, int samples);
     void write_frame(AVFrame* frame_in);
+    void flush_frame(AVFrame* frame_in);
 
 public:
 

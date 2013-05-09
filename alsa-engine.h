@@ -18,6 +18,12 @@
 
 using namespace std;
 
+class buffer_done_t
+{
+public:
+    buffer_done_t(){}
+};
+
 template <int NUM_CHANNELS> struct alsa_frame
                             {
                                 short data[NUM_CHANNELS];
@@ -224,7 +230,13 @@ public:
 
             while( frames_ctr < total_frames )
             {
-                frames_ctr += (&pstream_buffers_[ nchannel ])->read_period( &pcm_functors_[ nchannel ]  );
+                ring_buffer_audio_t* pstream_buffer =  &pstream_buffers_[ nchannel ];
+                frames_ctr += pstream_buffer->read_period( &pcm_functors_[ nchannel ]  );
+
+                if( pstream_buffer->is_done() )
+                {
+                    throw buffer_done_t();
+                }
             }
         }
     }
@@ -279,9 +291,16 @@ alsa_engine( const char* szdev, unsigned int uperiods, unsigned int utimeout, ri
         {
             logger_ << ar << endl;
 
-            while(1)
+            try
             {
-                cycle();
+                while(1)
+                {
+                    cycle();
+                }
+            }
+            catch( buffer_done_t& e )
+            {
+                logger_ << "audio engine caught eof" << endl;
             }
 
             ar( "snd_pcm_close", snd_pcm_close(ppcm_) );

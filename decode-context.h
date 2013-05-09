@@ -185,6 +185,7 @@ protected:
             }
             else
             {
+                flush_frame(frame_);
                 throw decode_done_t();
             }
         }
@@ -229,6 +230,10 @@ protected:
             packet_temp_.size = 0;
             packet_temp_.data = NULL;
         }
+    }
+
+    virtual void flush_frame(AVFrame* frame_in)
+    {
     }
 
 public:
