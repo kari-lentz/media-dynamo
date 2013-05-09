@@ -16,7 +16,7 @@ LDLIBS := $(shell pkg-config --libs $(LIBS)) $(LDLIBS)
 
 CPPFLAGS =  -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -pthread -Wall -Werror -g -Iinclude
 
-INC := app-fault.h ring-buffer.h ring-buffer-video.h ring-buffer-audio.h unix-result.h result.h synch.h vwriter.h null-stream.h env-writer.h logger.h
+INC := app-fault.h ring-buffer.h ring-buffer-video.h ring-buffer-audio.h my-audio-frame.h unix-result.h result.h synch.h vwriter.h null-stream.h env-writer.h logger.h
 
 #
 # Link commands
