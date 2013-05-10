@@ -9,6 +9,7 @@ using namespace std;
 
 typedef struct
 {
+    int channel;
     const char* mp4_file_path;
     int start_at;
     ring_buffer_audio_t* ring_buffer;
@@ -35,7 +36,7 @@ private:
 
 public:
 
-    audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer, int channel);
+    audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer);
     ~audio_decode_context();
 
     void operator()(int start_at = 0);

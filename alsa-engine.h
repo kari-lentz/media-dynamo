@@ -53,7 +53,7 @@ pcm_reader(int nchannel, alsa_frame<NUM_ALSA_CHANNELS>* pframe_buffer, int num_a
 
     bool render_frame_specific(AME_AUDIO_FRAME* pframe)
     {
-        //logger_ << "PRE_ALSA_FRAME:"  << alsa_frame_ << ":channel:" << nchannel_ <<  endl;
+        logger_ << "PRE_ALSA_FRAME:" << alsa_frame_ << ":channel:" << nchannel_ <<  endl;
 
         for( int sample = 0; sample < pframe->samples; ++sample )
         {
@@ -61,7 +61,7 @@ pcm_reader(int nchannel, alsa_frame<NUM_ALSA_CHANNELS>* pframe_buffer, int num_a
             ++alsa_frame_;
         }
 
-        //logger_ << "POST_ALSA_PTS:"  << pframe->pts_ms << "MEDIA_MS:" << media_ms_  << ":channel:" << nchannel_ <<  endl;
+        // logger_ << "POST_ALSA_PTS:"  << pframe->pts_ms << "MEDIA_MS:" << media_ms_  << ":channel:" << nchannel_ <<  endl;
 
         if( alsa_frame_ >= num_alsa_frames_ )
         {

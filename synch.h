@@ -39,6 +39,7 @@ synch_t(T v):v_(v)
             pthread_cond_wait(&cond_, &mutex_);
             ret = v_;
         }
+
         pthread_mutex_unlock(&mutex_);
 
         return ret;
@@ -51,6 +52,15 @@ synch_t(T v):v_(v)
         pthread_cond_signal(&cond_);
         pthread_mutex_unlock(&mutex_);
     }
+
+    void broadcast(T v)
+    {
+        pthread_mutex_lock(&mutex_);
+        v_ = v;
+        pthread_cond_broadcast(&cond_);
+        pthread_mutex_unlock(&mutex_);
+    }
+
 };
 
 typedef synch_t<bool> ready_synch_t;

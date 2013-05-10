@@ -2,7 +2,7 @@
 
 logger_t sdl_holder::logger("VIDEO-PLAYER");
 
-sdl_holder::sdl_holder(int width, int height, int num_audio_zones, pthread_t* pthread_vfc, pthread_t* pthread_afc, pthread_t* pthread_render_video, pthread_t* pthread_render_audio):num_audio_zones_(num_audio_zones), pthread_vfc_(pthread_vfc), pthread_afc_(pthread_afc),pthread_render_video_(pthread_render_video), pthread_render_audio_(pthread_render_audio), surface_(0), overlay_(0)
+sdl_holder::sdl_holder(int width, int height, int num_audio_zones, list<pthread_t*>& threads):num_audio_zones_(num_audio_zones), threads_(threads), surface_(0), overlay_(0)
 {
     surface_ = SDL_SetVideoMode(width, height, 0, SDL_HWSURFACE | SDL_RESIZABLE | SDL_ASYNCBLIT | SDL_HWACCEL);
     if(!surface_)
@@ -26,11 +26,11 @@ sdl_holder::~sdl_holder()
 {
     logger << "will wait for secondary thread completion" << endl;
 
-    pthread_join( *pthread_render_video_, NULL );
-    pthread_join( *pthread_render_audio_, NULL );
+    for(list<pthread_t*>::iterator it = threads_.begin(); it != threads_.end(); ++it)
+    {
+        pthread_join( **it, NULL );
+    }
 
-    pthread_join( *pthread_vfc_, NULL );
-    pthread_join( *pthread_afc_, NULL );
     logger << "all secondary threads down" << endl;
 
     if( overlay_ ) SDL_FreeYUVOverlay( overlay_ );
@@ -73,7 +73,7 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
                 (&ring_buffers_audio[ idx ])->close_out();
             }
 
-            buffer_ready->signal( false );
+            buffer_ready->broadcast( false );
             video_ready->signal( false );
             audio_ready->signal( false );
 

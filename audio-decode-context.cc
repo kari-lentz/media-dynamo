@@ -29,6 +29,7 @@ int audio_decode_context::write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRA
     frame_out.skipped_p = false;
 
     frame_out.samples = samples;
+    frame_out.data[0] = &frame_out.raw_data[0][0];
 
     //caux_video << "AUDIO BEGIN DECODDE FRAME at:" << best_pts << endl;
     int ret = vwriter<AME_AUDIO_FRAME>(buffer_, false)( &frame_out, 1);
@@ -36,7 +37,7 @@ int audio_decode_context::write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRA
 
     if( ret <= 0 ) throw decode_done_t();
 
-    //caux << "WROTE TO AUDIO BUFFER:" << samples << endl;
+    //logger << "WROTE TO AUDIO BUFFER:" << samples << endl;
 
     return ret;
 }
@@ -130,7 +131,7 @@ void audio_decode_context::flush_frame(AVFrame* frame_in)
     }
 }
 
-audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer, int channel):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4),buffer_( &ring_buffer[channel] ), frame_out_idx_(0)
+audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4),buffer_( ring_buffer ), frame_out_idx_(0)
 {
 }
 

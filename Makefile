@@ -6,7 +6,7 @@ FLAGS_MYSQL := -DMYSQLPP_MYSQL_HEADERS_BURIED
 #define target, object, libraries
 #
 TARGET := ../bin/video-player
-OBJECTS := video-player.o sdl-holder.o video-decode-context.o audio-decode-context.o render-video.o  
+OBJECTS := video-player.o sdl-holder.o video-decode-context.o audio-decode-context.o audio-silence-context.o render-video.o  
 
 CC := g++
 
@@ -27,7 +27,7 @@ $(TARGET) : $(OBJECTS)
 #
 # Compile commands
 #
-video-player.o : video-player.cc video-player.h video-decode-context.h audio-decode-context.h decode-context.h render-video.h alsa-engine.h alsa-result.h ffmpeg-headers.h $(INC)
+video-player.o : video-player.cc video-player.h video-decode-context.h audio-decode-context.h audio-silence-context.h decode-context.h render-video.h alsa-engine.h alsa-result.h ffmpeg-headers.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o video-player.o $(FLAGS_MYSQL) video-player.cc
 
 sdl-holder.o : sdl-holder.cc sdl-holder.h
@@ -38,6 +38,9 @@ video-decode-context.o : video-decode-context.cc video-decode-context.h decode-c
 
 audio-decode-context.o : audio-decode-context.cc audio-decode-context.h decode-context.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o audio-decode-context.o audio-decode-context.cc
+
+audio-silence-context.o : audio-silence-context.cc audio-silence-context.h $(INC)
+	$(CC) $(CPPFLAGS) -c -o audio-silence-context.o audio-silence-context.cc
 
 render-video.o : render-video.cc render-video.h render.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o render-video.o render-video.cc

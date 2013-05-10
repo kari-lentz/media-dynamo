@@ -1,6 +1,7 @@
 #ifndef SDL_HOLDER
 #define SDL_HOLDER
 
+#include <list>
 #include <SDL/SDL.h>
 #include "app-fault.h"
 #include "logger.h"
@@ -16,17 +17,14 @@ private:
 
     int num_audio_zones_;
 
-    pthread_t* pthread_vfc_;
-    pthread_t* pthread_afc_;
-    pthread_t* pthread_render_video_;
-    pthread_t* pthread_render_audio_;
+    list<pthread_t*>& threads_;
 
     SDL_Surface* surface_;
     SDL_Overlay* overlay_;
 
 public:
 
-    sdl_holder(int width, int height, int num_audio_zones, pthread_t* pthread_vfc_, pthread_t* pthread_afc_, pthread_t* pthread_render_video_, pthread_t* pthread_render_audio_);
+    sdl_holder(int width, int height, int num_audio_zones, list<pthread_t*>& threads);
     ~sdl_holder();
 
     static logger_t logger;
