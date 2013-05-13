@@ -152,8 +152,6 @@ static void* audio_decode_context_thread(void *parg)
             throw app_fault("premature end of audio decode");
         }
 
-        sleep(100);
-
         audio_decode_context adc(penv->mp4_file_path, penv->ring_buffer);
         if(penv->run_p) adc();
         logger << "decode operation complete" << endl;
@@ -194,8 +192,6 @@ static void* audio_silence_context_thread(void *parg)
         {
             throw app_fault("premature end of audio silence");
         }
-
-        sleep(100);
 
         audio_silence_context asc(penv->ring_buffer);
         if(penv->run_p) asc();
