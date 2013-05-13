@@ -53,15 +53,21 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
     ctx = swr_alloc_set_opts ( NULL,
                                av_get_default_channel_layout( 2 ),
                                AV_SAMPLE_FMT_S16,
-                               44100,
-                               frame_->channel_layout,
-                               (AVSampleFormat) frame_->format,
-                               frame_->sample_rate,
+                               RATE,
+                               frame_in->channel_layout,
+                               (AVSampleFormat) frame_in->format,
+                               frame_in->sample_rate,
                                0,
                                NULL);
 
     if( ctx )
     {
+        if (swr_set_compensation(ctx, (AUDIO_PACKET_SIZE - frame_in->nb_samples) * RATE / frame_in->sample_rate,
+                                 AUDIO_PACKET_SIZE * RATE / frame_in->sample_rate) < 0)
+        {
+            throw app_fault( "swr_set_compensation() failed" );
+        }
+
         if( swr_init( ctx ) < 0 )
         {
             throw app_fault("swr_init failed");
@@ -72,7 +78,9 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
         int ret_convert = 0;
         bool buffering_p = false;
 
-        do
+        int remaining = AUDIO_PACKET_SIZE * RATE / frame_in->sample_rate;
+
+        while(remaining > 0)
         {
             uint8_t** in;
             int nb_samples;
@@ -94,6 +102,8 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
                                        (const uint8_t**) in,
                                        nb_samples);
 
+            remaining -= ret_convert;
+
             //so null paramters go to swr convert the next time
             //
             buffering_p = true;
@@ -103,6 +113,7 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
             for(int sample = 0; sample < ret_convert; ++sample)
             {
                 frame_out_.raw_data[frame_out_idx_][0] = (frame_stereo.raw_data[sample][0] + frame_stereo.raw_data[sample][1]) / 2;
+
                 ++frame_out_idx_;
 
                 if(frame_out_idx_ >= AUDIO_PACKET_SIZE)
@@ -112,7 +123,12 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
                 }
             }
 
-        } while( AUDIO_PACKET_SIZE == ret_convert );
+            if( AUDIO_PACKET_SIZE == ret_convert )
+            {
+                logger << "swr_convert returned " << ret_convert << " audio buffer too small" << endl;
+            }
+
+        }
 
         swr_free(&ctx);
     }

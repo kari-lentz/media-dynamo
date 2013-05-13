@@ -6,19 +6,6 @@ typedef short BASIC_AUDIO_SAMPLE;
 const int AUDIO_PACKET_SIZE = 1024;
 const int RATE = 44100;
 const int BITS_PER_SAMPLE = 16;
-const double DFRATE = (double) RATE;
-
-#define SAMPLES_TO_SECONDS( x ) ( ( (double) x ) / ( (double) RATE ) )
-
-class audio_calc
-{
-public:
-
-    static int get_bytes( int nchannels, int nseconds )
-    {
-        return nchannels * nseconds * RATE  * ( BITS_PER_SAMPLE / 8 );
-    }
-};
 
 template  <int NUM_CHANNELS, int SAMPLES_PER_FRAME> struct ame_audio_frame_t
 {

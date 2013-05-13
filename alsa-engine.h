@@ -68,7 +68,7 @@ pcm_reader(int nchannel, alsa_frame<NUM_ALSA_CHANNELS>* pframe_buffer, int num_a
             alsa_frame_ = 0;
         }
 
-        media_ms_ += pframe->samples * 1000 / 44100;
+        media_ms_ += pframe->samples * 1000 / RATE;
 
         return true;
     }
