@@ -49,7 +49,7 @@ SDL_Surface* sdl_holder::get_surface()
     return surface_;
 }
 
-void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, ready_synch_t* buffer_ready, ready_synch_t* video_ready, ready_synch_t* audio_ready, ready_synch_t* video_primed)
+void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, ready_synch_t* buffer_ready, ready_synch_t* video_ready, ready_synch_t* audio_ready, ready_synch_t* video_primed, ready_synch_t* audio_primed)
 {
     SDL_Event event;
     bool done_p = false;
@@ -77,6 +77,7 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
             video_ready->signal( false );
             audio_ready->signal( false );
             video_primed->broadcast( false );
+            audio_primed->broadcast( false );
 
             done_p = true;
             break;

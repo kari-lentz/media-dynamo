@@ -16,6 +16,7 @@ typedef struct
     ready_synch_t* buffer_ready;
     ready_synch_t* audio_ready;
     ready_synch_t* video_ready;
+    ready_synch_t* audio_primed;
     bool debug_p;
     bool run_p;
     int ret;

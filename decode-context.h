@@ -214,7 +214,7 @@ protected:
                 {
                     if(frame_count_ < min_frames_)
                     {
-                        caux << "BUFFER NOT PRIMED stread idx:" << stream_idx_ << ":frame-count:" << frame_count_<< ":min_frames:" << min_frames_ << endl;
+                        //caux << "BUFFER NOT PRIMED stread idx:" << stream_idx_ << ":frame-count:" << frame_count_<< ":min_frames:" << min_frames_ << endl;
                         ++frame_count_;
                     }
                     else

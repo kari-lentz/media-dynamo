@@ -152,7 +152,7 @@ static void* audio_decode_context_thread(void *parg)
             throw app_fault("premature end of audio decode");
         }
 
-        audio_decode_context adc(penv->mp4_file_path, penv->ring_buffer);
+        audio_decode_context adc(penv->mp4_file_path, penv->ring_buffer, penv->audio_primed);
         if(penv->run_p) adc();
         logger << "decode operation complete" << endl;
         penv->ret = 0;
@@ -242,6 +242,7 @@ static void* render_video_thread(void *parg)
             throw app_fault("premature end of render video while waiting on audio");
         }
 
+        decode_context<AME_VIDEO_FRAME>::logger << "VIDEO READY" << endl;
         if(penv->run_p) rv();
 
         caux_video << "display complete" << endl;
@@ -288,6 +289,15 @@ static void* render_audio_thread(void *parg)
             }
 
             penv->buffer_ready->broadcast(true);
+
+            if( !penv->audio_primed->wait() )
+            {
+                throw app_fault("premature end of render audio while waiting on priming");
+            }
+            else
+            {
+                decode_context<AME_VIDEO_FRAME>::logger << "AUDIO now primed" << endl;
+            }
         }
         else
         {
@@ -297,9 +307,10 @@ static void* render_audio_thread(void *parg)
         penv->audio_ready->signal(true);
         if( !penv->video_ready->wait() )
         {
-            throw app_fault( "premature end of render audio" );
+            throw app_fault( "premature end of render audio while waiting on video" );
         }
 
+        decode_context<AME_VIDEO_FRAME>::logger << "AUDIO READY" << endl;
         if( penv->run_p ) penv->ret = ae();
     }
     catch( app_fault& e )
@@ -348,6 +359,7 @@ int run_play(const char* mp4_file_path)
     synch_t< bool > audio_ready;
     synch_t< bool > video_ready;
     synch_t< bool > video_primed( false );
+    synch_t< bool > audio_primed( false );
 
     int ret = 0;
     pthread_t thread_vfc, thread_afc, thread_asc[3], thread_render_video, thread_render_audio;
@@ -398,6 +410,7 @@ int run_play(const char* mp4_file_path)
         env_adc.start_at = 0;
         env_adc.ring_buffer = &pcm_buffers[ 0 ];
         env_adc.buffer_ready = &buffer_ready;
+        env_adc.audio_primed = &audio_primed;
         env_adc.run_p = true;
         env_adc.ret = 0;
 
@@ -464,6 +477,7 @@ int run_play(const char* mp4_file_path)
         env_render_audio.buffer_ready = &buffer_ready;
         env_render_audio.audio_ready = &audio_ready;
         env_render_audio.video_ready = &video_ready;
+        env_render_audio.audio_primed = &audio_primed;
         env_render_audio.run_p = true;
         env_render_audio.debug_p = false;
 
@@ -478,7 +492,7 @@ int run_play(const char* mp4_file_path)
 
         //main SDL loop for everything
         //
-        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &video_ready, &audio_ready, &video_primed);
+        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &video_ready, &audio_ready, &video_primed, &audio_primed);
     }
     catch(app_fault& e)
     {

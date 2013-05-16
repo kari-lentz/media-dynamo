@@ -22,6 +22,7 @@ template <> logger_t decode_context<AME_AUDIO_FRAME>::logger("AUDIO-PLAYER");
 
 void audio_decode_context::buffer_primed()
 {
+    audio_primed_->signal(true);
 }
 
 int audio_decode_context::write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRAME& frame_out, int samples)
@@ -151,7 +152,7 @@ void audio_decode_context::flush_frame(AVFrame* frame_in)
     }
 }
 
-audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4, ring_buffer->get_frames_per_period() * ring_buffer->get_periods() - ring_buffer->get_available_samples()),buffer_( ring_buffer ), frame_out_idx_(0)
+audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer, ready_synch_t* audio_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1)), buffer_( ring_buffer ), frame_out_idx_(0), audio_primed_(audio_primed)
 {
 }
 
