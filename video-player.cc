@@ -112,7 +112,7 @@ static void* video_decode_context_thread(void *parg)
 
     try
     {
-        video_decode_context vdc(penv->mp4_file_path, penv->ring_buffer, penv->overlay);
+        video_decode_context vdc(penv->mp4_file_path, penv->ring_buffer, penv->overlay, penv->video_primed);
         if(penv->run_p) vdc();
         caux_video << "decode operation complete" << endl;
         penv->ret = 0;
@@ -229,10 +229,17 @@ static void* render_video_thread(void *parg)
     {
         render_video rv(penv->ring_buffer, penv->overlay);
 
+        if( !penv->video_primed->wait() )
+        {
+            throw app_fault("premature end of render video while waiting on priming");
+        }
+
+        decode_context<AME_VIDEO_FRAME>::logger << "VIDEO NOW PRIMED" << endl;
+
         penv->video_ready->signal(true);
         if( !penv->audio_ready->wait() )
         {
-            throw app_fault("premature end of render video");
+            throw app_fault("premature end of render video while waiting on audio");
         }
 
         if(penv->run_p) rv();
@@ -320,8 +327,8 @@ static void* render_audio_thread(void *parg)
 
 int run_play(const char* mp4_file_path)
 {
-    int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", 854);
-    int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", 480);
+    int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", 1920);
+    int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", 1080);
 
     string ALSA_DEV = getenv_string( "ALSA_DEV", "hw:0,0" );
     int NUM_CHANNELS = getenv_numeric( "NUM_CHANNELS", 4 );
@@ -340,6 +347,7 @@ int run_play(const char* mp4_file_path)
     synch_t< bool >  buffer_ready(false);
     synch_t< bool > audio_ready;
     synch_t< bool > video_ready;
+    synch_t< bool > video_primed( false );
 
     int ret = 0;
     pthread_t thread_vfc, thread_afc, thread_asc[3], thread_render_video, thread_render_audio;
@@ -367,6 +375,7 @@ int run_play(const char* mp4_file_path)
         env_vdc.overlay = sdl.get_overlay();
         env_vdc.start_at = 0;
         env_vdc.ring_buffer = &ring_buffer_video;
+        env_vdc.video_primed = &video_primed;
         env_vdc.run_p = true;
         env_vdc.ret = 0;
 
@@ -427,6 +436,7 @@ int run_play(const char* mp4_file_path)
         env_render_video.overlay = sdl.get_overlay();
         env_render_video.audio_ready = &audio_ready;
         env_render_video.video_ready = &video_ready;
+        env_render_video.video_primed = &video_primed;
         env_render_video.run_p = true;
 
         //set up the render video
@@ -468,7 +478,7 @@ int run_play(const char* mp4_file_path)
 
         //main SDL loop for everything
         //
-        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &video_ready, &audio_ready);
+        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &video_ready, &audio_ready, &video_primed);
     }
     catch(app_fault& e)
     {

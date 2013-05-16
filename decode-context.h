@@ -116,6 +116,10 @@ protected:
     AVPacket packet_temp_;
     bool error_p_;
 
+    int frame_count_;
+    int min_frames_;
+    int primed_p_;
+
     void start_stream(int start_at = 0)
     {
         max_pos_ = 0;
@@ -160,6 +164,7 @@ protected:
     }
 
     virtual void write_frame(AVFrame* frame_in)=0;
+    virtual void buffer_primed() = 0;
 
     void iter_frame()
     {
@@ -205,6 +210,21 @@ protected:
 
             if( got_frame )
             {
+                if( !primed_p_ )
+                {
+                    if(frame_count_ < min_frames_)
+                    {
+                        caux << "BUFFER NOT PRIMED stread idx:" << stream_idx_ << ":frame-count:" << frame_count_<< ":min_frames:" << min_frames_ << endl;
+                        ++frame_count_;
+                    }
+                    else
+                    {
+                        caux << "buffer primed for stream idx:" << stream_idx_ << endl;
+                        primed_p_ = true;
+                        buffer_primed();
+                    }
+                }
+
                 write_frame(frame_);
             }
 
@@ -254,7 +274,7 @@ public:
 
     // handle various input formats
     //
-decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_function_t avcodec_decode_function):mp4_file_path_(mp4_file_path), type_(type), avcodec_decode_function_(avcodec_decode_function), error_p_(false)
+decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_function_t avcodec_decode_function, int min_frames):mp4_file_path_(mp4_file_path), type_(type), avcodec_decode_function_(avcodec_decode_function), error_p_(false), frame_count_(0), min_frames_(min_frames), primed_p_(false)
     {
         av_log_set_callback( &decode_context::log_callback );
 

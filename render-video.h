@@ -12,6 +12,7 @@ typedef struct
     SDL_Overlay* overlay;
     ready_synch_t* audio_ready;
     ready_synch_t* video_ready;
+    ready_synch_t* video_primed;
     bool debug_p;
     bool run_p;
     int ret;

@@ -20,6 +20,10 @@ using namespace std;
 
 template <> logger_t decode_context<AME_AUDIO_FRAME>::logger("AUDIO-PLAYER");
 
+void audio_decode_context::buffer_primed()
+{
+}
+
 int audio_decode_context::write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRAME& frame_out, int samples)
 {
     int best_pts = av_frame_get_best_effort_timestamp(frame_) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
@@ -147,7 +151,7 @@ void audio_decode_context::flush_frame(AVFrame* frame_in)
     }
 }
 
-audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4),buffer_( ring_buffer ), frame_out_idx_(0)
+audio_decode_context::audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer):decode_context(mp4_file_path, AVMEDIA_TYPE_AUDIO, &avcodec_decode_audio4, ring_buffer->get_frames_per_period() * ring_buffer->get_periods() - ring_buffer->get_available_samples()),buffer_( ring_buffer ), frame_out_idx_(0)
 {
 }
 

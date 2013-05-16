@@ -32,7 +32,7 @@ public:
     SDL_Overlay* get_overlay();
     SDL_Surface* get_surface();
 
-    void message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, ready_synch_t* buffer_ready, ready_synch_t* video_ready, ready_synch_t* audio_ready);
+    void message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, ready_synch_t* buffer_ready, ready_synch_t* video_ready, ready_synch_t* audio_ready, ready_synch_t* video_primed);
 
 };
 

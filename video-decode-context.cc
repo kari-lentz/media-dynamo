@@ -20,6 +20,11 @@ using namespace std;
 
 template <> logger_t decode_context<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
 
+void video_decode_context::buffer_primed()
+{
+    video_primed_->signal(true);
+}
+
 void video_decode_context::write_frame(AVFrame* frame_in)
 {
     AME_VIDEO_FRAME frame_out;
@@ -62,7 +67,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     if( ret <= 0 ) throw decode_done_t();
 }
 
-video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2),buffer_( ring_buffer ), overlay_(overlay)
+video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay, ready_synch_t* video_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), overlay_(overlay), video_primed_(video_primed)
 {
 }
 
