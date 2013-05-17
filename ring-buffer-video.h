@@ -19,6 +19,8 @@ const int MAX_SCREEN_HEIGHT = 1080;
 
 typedef struct
 {
+    int width;
+    int height;
     uint8_t* data[4];
     uint8_t raw_data[ 4 * MAX_SCREEN_WIDTH * MAX_SCREEN_HEIGHT ];
     int linesize[ 4 ];

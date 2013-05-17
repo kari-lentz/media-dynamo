@@ -33,6 +33,7 @@ private:
 
     void buffer_primed();
     void write_frame(AVFrame* frame_in);
+    void test_cairo( AME_MIXER_FRAME* frame );
 
 public:
 

@@ -10,7 +10,7 @@ OBJECTS := video-player.o sdl-holder.o video-decode-context.o audio-decode-conte
 
 CC := g++
 
-LIBS := libavdevice libavformat libavfilter libavcodec libswresample libswscale libavutil sdl		
+LIBS := libavdevice libavformat libavfilter libavcodec libswresample libswscale libavutil sdl cairo		
 
 LDLIBS := $(shell pkg-config --libs $(LIBS)) $(LDLIBS)
 

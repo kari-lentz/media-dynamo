@@ -24,7 +24,7 @@ sdl_holder::sdl_holder(int width, int height, int num_audio_zones, list<pthread_
 
 sdl_holder::~sdl_holder()
 {
-    logger << "will wait for secondary thread completion" << endl;
+    logger << "DESTROYED CAIRO SURFACE" << endl;
 
     for(list<pthread_t*>::iterator it = threads_.begin(); it != threads_.end(); ++it)
     {
