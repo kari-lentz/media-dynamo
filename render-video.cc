@@ -52,7 +52,7 @@ int render_video::operator()()
     {
         pbuffer_->read_avail( &functor_ );
 
-        int delay = 20;
+        int delay = 10;
         usleep( delay * 1000 );
 
     }  while( !pbuffer_->is_done() );

@@ -20,6 +20,9 @@ using namespace std;
 
 template <> logger_t decode_context<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
 
+AME_MIXER_FRAME frame_mix;
+AME_VIDEO_FRAME frame_out;
+
 void video_decode_context::buffer_primed()
 {
     video_primed_->signal(true);
@@ -27,11 +30,36 @@ void video_decode_context::buffer_primed()
 
 void video_decode_context::write_frame(AVFrame* frame_in)
 {
-    AME_VIDEO_FRAME frame_out;
-
     AVCodecContext* codec_context = get_codec_context();
 
-    SwsContext*  sws_context = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
+    SwsContext*  sws_context = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, overlay_->pitches[0], overlay_->h, PIX_FMT_RGB24, SWS_BICUBIC, 0, 0, 0);
+
+    //PIX_FMT_YUV420P
+
+    if( !sws_context )
+    {
+        stringstream ss;
+        ss << "failed to get scale context";
+        throw app_fault( ss.str().c_str() );
+    }
+
+    //Scale the raw data/convert it to our video buffer...
+    //
+    frame_mix.data[0] = frame_mix.raw_data;
+    frame_mix.data[1] = NULL;
+    frame_mix.data[2] = NULL;
+    frame_mix.data[3] = NULL;
+
+    frame_mix.linesize[ 0 ] = 3 * overlay_->pitches[0];
+    frame_mix.linesize[ 1 ] = 0;
+    frame_mix.linesize[ 2 ] = 0;
+    frame_mix.linesize[ 3 ] = 0;
+
+    sws_scale(sws_context, frame_in->data, frame_in->linesize, 0, frame_in->height, frame_mix.data, frame_mix.linesize);
+
+    av_free( sws_context );
+
+    sws_context = sws_getContext(overlay_->pitches[0], overlay_->h, PIX_FMT_RGB24, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
 
     if( !sws_context )
     {
@@ -50,7 +78,8 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     frame_out.linesize[ 2 ] = overlay_->pitches[ 1 ];
     frame_out.linesize[ 1 ] = overlay_->pitches[ 2 ];
 
-    sws_scale(sws_context, frame_in->data, frame_in->linesize, 0, frame_in->height, frame_out.data, frame_out.linesize);
+    sws_scale(sws_context, frame_mix.data, frame_mix.linesize, 0, overlay_->h, frame_out.data, frame_out.linesize);
+
     av_free( sws_context );
 
     int best_pts = av_frame_get_best_effort_timestamp(frame_in) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;

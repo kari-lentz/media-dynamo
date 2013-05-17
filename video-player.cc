@@ -338,8 +338,11 @@ static void* render_audio_thread(void *parg)
 
 int run_play(const char* mp4_file_path)
 {
-    int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", 1920);
-    int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", 1080);
+    int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", MAX_SCREEN_WIDTH);
+    int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", MAX_SCREEN_HEIGHT);
+
+    //int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", 1920);
+    //int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", 640);
 
     string ALSA_DEV = getenv_string( "ALSA_DEV", "hw:0,0" );
     int NUM_CHANNELS = getenv_numeric( "NUM_CHANNELS", 4 );

@@ -5,6 +5,27 @@
 
 typedef struct
 {
+    uint8_t a;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} ARGB;
+
+const int MAX_SCREEN_WIDTH = 1920;
+const int MAX_SCREEN_HEIGHT = 1080;
+
+//const int MAX_SCREEN_WIDTH = 1536;
+//const int MAX_SCREEN_HEIGHT= 864;
+
+typedef struct
+{
+    uint8_t* data[4];
+    uint8_t raw_data[ 4 * MAX_SCREEN_WIDTH * MAX_SCREEN_HEIGHT ];
+    int linesize[ 4 ];
+} AME_MIXER_FRAME;
+
+typedef struct
+{
     int width;
     int height;
     int pts_ms;

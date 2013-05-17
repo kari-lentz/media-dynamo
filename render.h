@@ -43,6 +43,8 @@ protected:
             T* pframe_playable = NULL;
             int media_ms = (int) (get_media_ms() - *pbegin_tick_ms_);
 
+            int playable_count = 0;
+
             for( int idx = 0; idx < num_frames; ++idx )
             {
                 T* pframe = &pframes[ idx ];
@@ -55,8 +57,15 @@ protected:
                     {
                         highest_ms = pframe->pts_ms;
                         pframe_playable = pframe;
+
+                        ++playable_count;
                     }
                 }
+            }
+
+            if( playable_count > 1 )
+            {
+                logger_ << "skipped frames:" << (playable_count - 1) << endl;
             }
 
             //populate the data with a playable frame in the ring buffer if it exists
