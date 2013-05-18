@@ -341,9 +341,6 @@ int run_play(const char* mp4_file_path)
     int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", MAX_SCREEN_WIDTH);
     int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", MAX_SCREEN_HEIGHT);
 
-    //int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", 1920);
-    //int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", 640);
-
     string ALSA_DEV = getenv_string( "ALSA_DEV", "hw:0,0" );
     int NUM_CHANNELS = getenv_numeric( "NUM_CHANNELS", 4 );
     int PERIODS_ALSA = getenv_numeric( "PERIODS_ALSA", 8 );
@@ -367,6 +364,11 @@ int run_play(const char* mp4_file_path)
     int ret = 0;
     pthread_t thread_vfc, thread_afc, thread_asc[3], thread_render_video, thread_render_audio;
     list<pthread_t*> threads;
+
+    // set up the silence threads
+    //
+    int silence_channels [] = {0, 2, 3};
+    int audio_channel = 1;
 
     threads.push_back(&thread_vfc);
     threads.push_back(&thread_afc);
@@ -409,9 +411,9 @@ int run_play(const char* mp4_file_path)
         ring_buffer_audio_t pcm_buffers[ 4  ];
 
         env_adc.mp4_file_path = mp4_file_path;
-        env_adc.channel = 0;
+        env_adc.channel = audio_channel;
         env_adc.start_at = 0;
-        env_adc.ring_buffer = &pcm_buffers[ 0 ];
+        env_adc.ring_buffer = &pcm_buffers[ audio_channel ];
         env_adc.buffer_ready = &buffer_ready;
         env_adc.audio_primed = &audio_primed;
         env_adc.run_p = true;
@@ -426,12 +428,9 @@ int run_play(const char* mp4_file_path)
             throw app_fault( ss.str().c_str() );
         }
 
-        // set up the silence threads
-        //
-
         for( int idx = 0; idx < 3; ++idx )
         {
-            int channel = idx + 1;
+            int channel = silence_channels[ idx ];
             env_asc[idx].channel = channel;
             env_asc[idx].ring_buffer = &pcm_buffers[ channel ];
             env_asc[idx].buffer_ready = &buffer_ready;
