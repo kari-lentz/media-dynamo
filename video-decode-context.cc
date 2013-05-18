@@ -34,12 +34,12 @@ void video_decode_context::test_cairo( AME_MIXER_FRAME* frame )
     cairo_surface_t* cairo_surface;
     cairo_t* cr;
 
-    int stride = cairo_format_stride_for_width( CAIRO_FORMAT_RGB24, frame->width );
+    int stride = cairo_format_stride_for_width( CAIRO_FORMAT_ARGB32, frame->width );
 
 /* ... make sure sdlsurf is locked or doesn't need locking ... */
     cairo_surface = cairo_image_surface_create_for_data (
         (unsigned char*) frame->raw_data,
-        CAIRO_FORMAT_RGB24,
+        CAIRO_FORMAT_ARGB32,
         frame->width,
         frame->height,
         stride);
@@ -62,9 +62,9 @@ void video_decode_context::test_cairo( AME_MIXER_FRAME* frame )
     cairo_select_font_face (cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
     cairo_set_font_size (cr, 32.0);
     cairo_set_source_rgb (cr, 0.0, 0.0, 1.0);
-    cairo_move_to (cr, 10.0, 50.0);
+    cairo_move_to (cr, 200.0, 400.0);
     cairo_show_text (cr, "Hello, world");
-    logger << "CAIRO DRAW" << endl;
+    //logger << "CAIRO DRAW:" << frame->width << ":" << stride << "" << endl;
 
     if( cr )
     {
@@ -83,7 +83,10 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 {
     AVCodecContext* codec_context = get_codec_context();
 
-    SwsContext*  sws_context = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, overlay_->pitches[0], overlay_->h, PIX_FMT_RGB24, SWS_BICUBIC, 0, 0, 0);
+    frame_mix.width = overlay_->pitches[0];
+    frame_mix.height = overlay_->h;
+
+    SwsContext*  sws_context = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, frame_mix.width, frame_mix.height, PIX_FMT_ARGB, SWS_BICUBIC, 0, 0, 0);
 
     //PIX_FMT_YUV420P
 
@@ -101,13 +104,10 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     frame_mix.data[2] = NULL;
     frame_mix.data[3] = NULL;
 
-    frame_mix.linesize[ 0 ] = 3 * overlay_->pitches[0];
+    frame_mix.linesize[ 0 ] = 4 * frame_mix.width;
     frame_mix.linesize[ 1 ] = 0;
     frame_mix.linesize[ 2 ] = 0;
     frame_mix.linesize[ 3 ] = 0;
-
-    frame_mix.width = frame_in->width;
-    frame_mix.height = frame_in->height;
 
     sws_scale(sws_context, frame_in->data, frame_in->linesize, 0, frame_in->height, frame_mix.data, frame_mix.linesize);
 
@@ -115,7 +115,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
     test_cairo(&frame_mix);
 
-    sws_context = sws_getContext(overlay_->pitches[0], overlay_->h, PIX_FMT_RGB24, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
+    sws_context = sws_getContext(overlay_->pitches[0], overlay_->h, PIX_FMT_ARGB, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
 
     if( !sws_context )
     {
