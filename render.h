@@ -67,6 +67,14 @@ protected:
             {
                 logger_ << "skipped frames:" << (playable_count - 1) << endl;
             }
+            else if(pframe_playable)
+            {
+                int drift = media_ms - pframe_playable->pts_ms;
+                if( drift > 50 )
+                {
+                    logger_ << "detected drift of:" << drift << endl;
+                }
+            }
 
             //populate the data with a playable frame in the ring buffer if it exists
             //
