@@ -15,7 +15,6 @@
 
 #include "video-decode-context.h"
 #include "sdl-holder.h"
-#include <cairo/cairo.h>
 
 using namespace std;
 
@@ -24,12 +23,30 @@ template <> logger_t decode_context<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
 AME_MIXER_FRAME frame_mix;
 AME_VIDEO_FRAME frame_out;
 
+void video_decode_context::load_cairo_commands()
+{
+    cairo_commands_.push_back( new move_to_f( 100, 200 ) );
+    cairo_commands_.push_back( new set_source_rgba_f(0.0, 0.8, 0.0, 0.4) );
+    cairo_commands_.push_back( new select_font_face_f( "Sans", CAIRO_FONT_SLANT_ITALIC, CAIRO_FONT_WEIGHT_BOLD) );
+    cairo_commands_.push_back( new set_font_size_f( 64 ) );
+    cairo_commands_.push_back( new show_text_f( "The quick brown fox" ) );
+    cairo_commands_.push_back( new show_png_f( "/mnt/MUSIC-THD/test-image-1.png", 300, 100, 0.3 ) );
+}
+
+void video_decode_context::unload_cairo_commands()
+{
+    for( list<cairo_f*>::iterator it = cairo_commands_.begin(); it != cairo_commands_.end(); ++it )
+    {
+        delete (*it);
+    }
+}
+
 void video_decode_context::buffer_primed()
 {
     video_primed_->signal(true);
 }
 
-void video_decode_context::test_cairo( AME_MIXER_FRAME* frame )
+void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
 {
     cairo_surface_t* cairo_surface;
     cairo_t* cr;
@@ -59,12 +76,10 @@ void video_decode_context::test_cairo( AME_MIXER_FRAME* frame )
         throw app_fault( "" );
     }
 
-    cairo_select_font_face (cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    cairo_set_font_size (cr, 32.0);
-    cairo_set_source_rgb (cr, 0.0, 0.0, 1.0);
-    cairo_move_to (cr, 200.0, 400.0);
-    cairo_show_text (cr, "Hello, world");
-    //logger << "CAIRO DRAW:" << frame->width << ":" << stride << "" << endl;
+    for( list<cairo_f*>::iterator it = cairo_commands_.begin(); it != cairo_commands_.end(); ++it )
+    {
+        (*it)->render(cr);
+    }
 
     if( cr )
     {
@@ -113,7 +128,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
     av_free( sws_context );
 
-    test_cairo(&frame_mix);
+    with_cairo(&frame_mix);
 
     sws_context = sws_getContext(overlay_->pitches[0], overlay_->h, PIX_FMT_RGB32, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
 
@@ -154,10 +169,12 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
 video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay, ready_synch_t* video_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), overlay_(overlay), video_primed_(video_primed)
 {
+    load_cairo_commands();
 }
 
 video_decode_context::~video_decode_context()
 {
+    unload_cairo_commands();
 }
 
 void video_decode_context::operator()(int start_at)

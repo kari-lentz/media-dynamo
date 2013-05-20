@@ -1,6 +1,7 @@
 #ifndef RING_BUFFER_VIDEO
 #define RING_BUFFER_VIDEO
 
+#include <SDL/SDL.h>
 #include "ring-buffer.h"
 
 typedef struct

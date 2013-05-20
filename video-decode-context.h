@@ -1,11 +1,13 @@
 #ifndef VIDEO_DECODE_CONTEXT_H
 #define VIDEO_DECODE_CONTEXT_H
 
+#include <list>
+#include <SDL/SDL.h>
 #include "decode-context.h"
 #include "ring-buffer-video.h"
 #include "vwriter.h"
 #include "synch.h"
-#include <SDL/SDL.h>
+#include "cairo-f.h"
 
 using namespace std;
 
@@ -30,10 +32,16 @@ private:
 
     AVFormatContext* oc_;
     FILE* outfile_;
+    list<cairo_f*> cairo_commands_;
+
+    void load_cairo_commands();
+    void unload_cairo_commands();
+
+    void using_cairo(AME_MIXER_FRAME* frame, cairo_t* cr);
+    void with_cairo(AME_MIXER_FRAME* frame);
 
     void buffer_primed();
     void write_frame(AVFrame* frame_in);
-    void test_cairo( AME_MIXER_FRAME* frame );
 
 public:
 
