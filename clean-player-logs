@@ -1,0 +1,6 @@
+#!/bin/bash
+
+sudo rm /var/log/ame/player-alsa.log
+sudo rm /var/log/ame/zone-player*.log
+sudo rm /var/log/ame/video-player*.log
+sudo service rsyslog restart
