@@ -86,7 +86,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     frame_mix.width = overlay_->pitches[0];
     frame_mix.height = overlay_->h;
 
-    SwsContext*  sws_context = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, frame_mix.width, frame_mix.height, PIX_FMT_ARGB, SWS_BICUBIC, 0, 0, 0);
+    SwsContext*  sws_context = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, frame_mix.width, frame_mix.height, PIX_FMT_RGB32, SWS_BICUBIC, 0, 0, 0);
 
     //PIX_FMT_YUV420P
 
@@ -115,7 +115,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
     test_cairo(&frame_mix);
 
-    sws_context = sws_getContext(overlay_->pitches[0], overlay_->h, PIX_FMT_ARGB, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
+    sws_context = sws_getContext(overlay_->pitches[0], overlay_->h, PIX_FMT_RGB32, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
 
     if( !sws_context )
     {
