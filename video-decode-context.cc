@@ -25,11 +25,9 @@ AME_VIDEO_FRAME frame_out;
 
 void video_decode_context::load_cairo_commands()
 {
-    cairo_commands_.push_back( new move_to_f( 100, 200 ) );
-    cairo_commands_.push_back( new set_source_rgba_f(0.0, 0.8, 0.0, 0.4) );
-    cairo_commands_.push_back( new select_font_face_f( "Sans", CAIRO_FONT_SLANT_ITALIC, CAIRO_FONT_WEIGHT_BOLD) );
-    cairo_commands_.push_back( new set_font_size_f( 64 ) );
-    cairo_commands_.push_back( new show_text_f( "The quick brown fox" ) );
+    cairo_commands_.push_back( new translate_f( 100, 200 ) );
+    cairo_commands_.push_back( new set_source_rgba_f(0.2, 0.8, 0.2, 0.2) );
+    cairo_commands_.push_back( new show_text_f( "The quick brown fox", "Sans Serif", eWeightBold, eSlantItalic, 64 ) );
     cairo_commands_.push_back( new show_png_f( "/mnt/MUSIC-THD/test-image-1.png", 300, 100, 0.3 ) );
 }
 

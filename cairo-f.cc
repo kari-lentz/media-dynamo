@@ -3,16 +3,47 @@
 
 #include "cairo-f.h"
 
+map<font_slant_t, string> cairo_f::font_slants_;
+map<font_weight_t, string> cairo_f::font_weights_;
+
+void cairo_f::register_all()
+{
+    font_slants_[ eSlantNormal ] = "Normal";
+    font_slants_[ eSlantItalic ] = "Italic";
+
+    font_weights_[ eWeightNormal ] = "Normal";
+    font_weights_[ eWeightBold ] = "Bold";
+}
+
+string cairo_f::get_font_slant(font_slant_t font_slant)
+{
+    return font_slants_[ font_slant ];
+}
+
+string cairo_f::get_font_weight(font_weight_t font_weight)
+{
+    return font_weights_[ font_weight ];
+}
+
 cairo_f::cairo_f()
 {}
 
-move_to_f::move_to_f(int x, int y):cairo_f(), x_(x), y_(y)
+move_to_f::move_to_f(double x, double y):cairo_f(), x_(x), y_(y)
 {
 }
 
 void move_to_f::render(cairo_t* cr)
 {
     cairo_move_to(cr, x_, y_);
+}
+
+translate_f::translate_f(double x, double y):cairo_f(), x_(x), y_(y)
+{
+}
+
+void translate_f::render(cairo_t* cr)
+{
+    cairo_translate(cr, x_, y_);
 }
 
 set_source_rgba_f::set_source_rgba_f(double r, double g, double b,double a):cairo_f(),r_(r), g_(g), b_(b), a_(a)
@@ -24,31 +55,42 @@ void set_source_rgba_f::render(cairo_t* cr)
     cairo_set_source_rgba(cr, r_, g_, b_, a_);
 }
 
-set_font_size_f::set_font_size_f(int size):cairo_f(),size_(size)
+show_text_f::show_text_f(const char* text, const char* font_family, font_weight_t font_weight, font_slant_t font_slant, int font_size):cairo_f(),text_(text)
 {
-}
+    stringstream ss;
+    ss << font_family;
 
-void set_font_size_f::render(cairo_t* cr)
-{
-    cairo_set_font_size(cr, size_);
-}
+    if( font_slant != eSlantNormal )
+    {
+        ss << " " << get_font_slant( font_slant );
+    }
 
-select_font_face_f::select_font_face_f(const char* font_face, cairo_font_slant_t slant, cairo_font_weight_t weight):cairo_f(),font_face_(font_face), slant_(slant), weight_(weight)
-{
-}
+    if( font_weight != eWeightNormal )
+    {
+        ss << " " << get_font_weight( font_weight );
+    }
 
-void select_font_face_f::render(cairo_t* cr)
-{
-    cairo_select_font_face(cr, font_face_.c_str(), slant_, weight_);
-}
+    ss << " " << font_size;
 
-show_text_f::show_text_f(const char* text):cairo_f(),text_(text)
-{
+    font_ = ss.str();
 }
 
 void show_text_f::render(cairo_t* cr)
 {
-    cairo_show_text(cr, text_.c_str());
+    PangoLayout *layout;
+    PangoFontDescription *desc;
+
+    layout = pango_cairo_create_layout(cr);
+
+    pango_layout_set_text(layout, text_.c_str(), -1);
+    desc = pango_font_description_from_string(font_.c_str());
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+
+    g_object_unref(layout);
+
 }
 
 show_png_f::show_png_f(const char* path, double x, double y, double alpha):cairo_f(),surface_(NULL), x_(x),y_(y), alpha_(alpha)

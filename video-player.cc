@@ -25,6 +25,7 @@ static const unsigned long STDIN_MAX = 1000000;
 #include "render-audio.h"
 #include "video-player.h"
 #include "sdl-holder.h"
+#include "cairo-f.h"
 
 #define USER_QUIT (SDL_USEREVENT + 0)
 
@@ -518,6 +519,7 @@ int run_play(const char* mp4_file_path)
 int main(int argc, char *argv[])
 {
     av_register_all();
+    cairo_f::register_all();
 
     if (av_lockmgr_register(lockmgr))
     {
