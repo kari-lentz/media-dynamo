@@ -37,6 +37,8 @@ private:
     void load_cairo_commands();
     void unload_cairo_commands();
 
+    void run_commands(cairo_t* cr);
+
     void using_cairo(AME_MIXER_FRAME* frame, cairo_t* cr);
     void with_cairo(AME_MIXER_FRAME* frame);
 

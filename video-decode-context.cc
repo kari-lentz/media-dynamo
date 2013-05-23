@@ -27,7 +27,16 @@ void video_decode_context::load_cairo_commands()
 {
     cairo_commands_.push_back( new translate_f( 100, 200 ) );
     cairo_commands_.push_back( new set_source_rgba_f(0.2, 0.8, 0.2, 0.2) );
-    cairo_commands_.push_back( new show_text_f( "The quick brown fox", "Sans Serif", eWeightBold, eSlantItalic, 64 ) );
+    cairo_commands_.push_back( new set_font_family_f( "New Century Schoolbook L" ) );
+    cairo_commands_.push_back( new set_font_weight_f( eWeightBold ) );
+    cairo_commands_.push_back( new set_font_size_f( 24 ) );
+    cairo_commands_.push_back( new set_layout_width_f( 800 ) );
+    cairo_commands_.push_back( new show_text_f( "There are various combinations of fonts and colors.  They need to be well layed out for an effective presentation."));
+    //cairo_commands_.push_back( new push_f() );
+    //cairo_commands_.push_back( new set_font_style_f( eStyleItalic ) );
+    //cairo_commands_.push_back( new show_text_f( "Clarity is the key." ) );
+    //cairo_commands_.push_back( new pop_f() );
+    cairo_commands_.push_back( new show_text_f( "Explore the menus and expiriment to see what works best.") );
     cairo_commands_.push_back( new show_png_f( "/mnt/MUSIC-THD/test-image-1.png", 300, 100, 0.3 ) );
 }
 
@@ -42,6 +51,16 @@ void video_decode_context::unload_cairo_commands()
 void video_decode_context::buffer_primed()
 {
     video_primed_->signal(true);
+}
+
+void video_decode_context::run_commands(cairo_t* cr)
+{
+    dom_context_stack_t dom_context_stack(cr);
+
+    for( list<cairo_f*>::iterator it = cairo_commands_.begin(); it != cairo_commands_.end(); ++it )
+    {
+        (*it)->render(cr, dom_context_stack);
+    }
 }
 
 void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
@@ -74,10 +93,7 @@ void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
         throw app_fault( "" );
     }
 
-    for( list<cairo_f*>::iterator it = cairo_commands_.begin(); it != cairo_commands_.end(); ++it )
-    {
-        (*it)->render(cr);
-    }
+    run_commands(cr);
 
     if( cr )
     {
