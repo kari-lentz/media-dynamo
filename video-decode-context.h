@@ -33,6 +33,7 @@ private:
     AVFormatContext* oc_;
     FILE* outfile_;
     list<cairo_f*> cairo_commands_;
+    int last_pts_ms_;
 
     void load_cairo_commands();
     void unload_cairo_commands();

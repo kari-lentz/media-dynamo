@@ -77,7 +77,11 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
             video_ready->signal( false );
             audio_ready->signal( false );
             video_primed->broadcast( false );
-            audio_primed->broadcast( false );
+
+            for(int idx = 0; idx < num_audio_zones_; ++idx)
+            {
+                (&audio_primed[idx])->broadcast( false );
+            }
 
             done_p = true;
             break;

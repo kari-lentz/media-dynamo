@@ -42,6 +42,9 @@ void video_decode_context::load_cairo_commands()
     cairo_commands_.push_back( new show_png_f( "/mnt/MUSIC-THD/test-image-1.png", 400, 300, alpha ) );
     cairo_commands_.push_back( new set_source_rgba_f(0.8, 0.2, 0.2, alpha) );
     cairo_commands_.push_back( new show_text_f( "Explore the menus and experiment to see what works best.") );
+
+    cairo_commands_.push_back( new translate_f( 0, 200 ) );
+    cairo_commands_.push_back( new set_source_rgba_f(0.8, 0.2, 0.2, alpha) );
 }
 
 void video_decode_context::unload_cairo_commands()
@@ -65,6 +68,12 @@ void video_decode_context::run_commands(cairo_t* cr)
     {
         (*it)->render(cr, dom_context_stack);
     }
+
+    stringstream ss;
+    ss << last_pts_ms_ / 1000 << " s";
+    string time_str = ss.str();
+    //logger << "WRITE:" << last_pts_ms_ << " ms " << buffer_->get_available_samples()  << endl;
+    show_text_f( time_str.c_str()).render(cr, dom_context_stack);
 }
 
 void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
@@ -154,6 +163,10 @@ void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
 
 void video_decode_context::write_frame(AVFrame* frame_in)
 {
+    int best_pts = av_frame_get_best_effort_timestamp(frame_in) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
+    last_pts_ms_ = best_pts;
+    //int pkt_pts = frame_in->pkt_dts * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
+
     AVCodecContext* codec_context = get_codec_context();
 
     frame_mix.width = overlay_->pitches[0];
@@ -211,9 +224,9 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
     av_free( sws_context );
 
-    int best_pts = av_frame_get_best_effort_timestamp(frame_in) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
-    //int pkt_pts = frame_in->pkt_dts * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
     frame_out.pts_ms = best_pts;
+
+    // logger << "PTS:" << last_pts_ms_ << endl;
 
     frame_out.width = codec_context->width;
     frame_out.height = codec_context->height;
@@ -225,7 +238,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     if( ret <= 0 ) throw decode_done_t();
 }
 
-video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay, ready_synch_t* video_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), overlay_(overlay), video_primed_(video_primed)
+video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay, ready_synch_t* video_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), overlay_(overlay), video_primed_(video_primed), last_pts_ms_(0)
 {
     load_cairo_commands();
 }
