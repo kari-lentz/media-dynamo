@@ -8,6 +8,12 @@ bool render_video::render_frame_specific(AME_VIDEO_FRAME* pframe)
 {
     SDL_LockYUVOverlay( overlay_ );
 
+    //this needs to be recalulated
+    //
+    pframe->data[0] = pframe->y_data;
+    pframe->data[1] = pframe->u_data;
+    pframe->data[2] = pframe->v_data;
+
     memcpy(overlay_->pixels[ 0 ], pframe->data[ 0 ], overlay_->pitches[0] * overlay_->h);
     memcpy(overlay_->pixels[ 2 ], pframe->data[ 1 ], (overlay_->pitches[2] * overlay_->h) >> 1);
     memcpy(overlay_->pixels[ 1 ], pframe->data[ 2 ], (overlay_->pitches[1] * overlay_->h) >> 1);
