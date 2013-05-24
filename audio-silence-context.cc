@@ -42,7 +42,7 @@ void audio_silence_context::write_frame()
     //logger << "WROTE TO AUDIO BUFFER:" << samples << endl;
 }
 
-audio_silence_context::audio_silence_context(ring_buffer_audio_t* ring_buffer):buffer_( ring_buffer ), logger_("AUDIO-PLAYER")
+audio_silence_context::audio_silence_context(ring_buffer_audio_t* ring_buffer, ready_synch_t* audio_primed):buffer_( ring_buffer ), audio_primed_(audio_primed), logger_("AUDIO-PLAYER"), min_frames_( ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) )
 {
 }
 
@@ -52,10 +52,24 @@ audio_silence_context::~audio_silence_context()
 
 void audio_silence_context::operator()()
 {
+    int frames = 0;
+    bool primed = false;
+
     try
     {
         while(true)
         {
+            if( !primed )
+            {
+                if( frames >= min_frames_ )
+                {
+                    primed = true;
+                    audio_primed_->signal(true);
+                }
+
+                ++frames;
+            }
+
             write_frame();
         }
     }

@@ -195,7 +195,7 @@ static void* audio_silence_context_thread(void *parg)
             throw app_fault("premature end of audio silence");
         }
 
-        audio_silence_context asc(penv->ring_buffer);
+        audio_silence_context asc(penv->ring_buffer, penv->audio_primed);
         if(penv->run_p) asc();
         logger << "silence operation complete" << endl;
         penv->ret = 0;
@@ -292,13 +292,16 @@ static void* render_audio_thread(void *parg)
 
             penv->buffer_ready->broadcast(true);
 
-            if( !penv->audio_primed->wait() )
+            for(int idx = 0; idx < 4; ++idx)
             {
-                throw app_fault("premature end of render audio while waiting on priming");
-            }
-            else
-            {
-                decode_context<AME_VIDEO_FRAME>::logger << "AUDIO now primed" << endl;
+                if( !(&penv->audio_primed[ idx ])->wait() )
+                {
+                    throw app_fault("premature end of render audio while waiting on priming");
+                }
+                else
+                {
+                    decode_context<AME_VIDEO_FRAME>::logger << "AUDIO now primed" << endl;
+                }
             }
         }
         else
@@ -361,7 +364,7 @@ int run_play(const char* mp4_file_path)
     synch_t< bool > audio_ready;
     synch_t< bool > video_ready;
     synch_t< bool > video_primed( false );
-    synch_t< bool > audio_primed( false );
+    synch_t< bool > audio_primed[ 4 ];
 
     int ret = 0;
     pthread_t thread_vfc, thread_afc, thread_asc[3], thread_render_video, thread_render_audio;
@@ -417,7 +420,7 @@ int run_play(const char* mp4_file_path)
         env_adc.start_at = 0;
         env_adc.ring_buffer = &pcm_buffers[ audio_channel ];
         env_adc.buffer_ready = &buffer_ready;
-        env_adc.audio_primed = &audio_primed;
+        env_adc.audio_primed = &audio_primed[ audio_channel ];
         env_adc.run_p = true;
         env_adc.ret = 0;
 
@@ -435,6 +438,7 @@ int run_play(const char* mp4_file_path)
             int channel = silence_channels[ idx ];
             env_asc[idx].channel = channel;
             env_asc[idx].ring_buffer = &pcm_buffers[ channel ];
+            env_asc[idx].audio_primed = &audio_primed[ channel ];
             env_asc[idx].buffer_ready = &buffer_ready;
             env_asc[idx].run_p = true;
             env_asc[idx].ret = 0;
@@ -481,7 +485,7 @@ int run_play(const char* mp4_file_path)
         env_render_audio.buffer_ready = &buffer_ready;
         env_render_audio.audio_ready = &audio_ready;
         env_render_audio.video_ready = &video_ready;
-        env_render_audio.audio_primed = &audio_primed;
+        env_render_audio.audio_primed = &audio_primed[0];
         env_render_audio.run_p = true;
         env_render_audio.debug_p = false;
 
@@ -496,7 +500,7 @@ int run_play(const char* mp4_file_path)
 
         //main SDL loop for everything
         //
-        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &video_ready, &audio_ready, &video_primed, &audio_primed);
+        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &video_ready, &audio_ready, &video_primed, &audio_primed[0]);
     }
     catch(app_fault& e)
     {
