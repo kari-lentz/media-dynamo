@@ -59,12 +59,14 @@ void dom_context_t::set_layout_indent(int indent)
 
 void dom_context_t::show_text(cairo_t* cr, const char* text)
 {
-    pango_layout_set_text(layout_, text, -1);
     if( pango_layout_get_font_description(layout_) != desc_ )
     {
         pango_layout_set_font_description(layout_, desc_);
     }
+
+    pango_layout_set_markup(layout_, text, -1);
     pango_cairo_update_layout(cr, layout_);
+
     pango_cairo_show_layout(cr, layout_);
 }
 

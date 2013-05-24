@@ -170,10 +170,14 @@ show_png_f::~show_png_f()
 
 void show_png_f::render(cairo_t* cr, dom_context_stack_t& dom_context_stack)
 {
-    cairo_set_source_surface(cr, surface_, x_, y_);
+    cairo_save(cr);
+
+    cairo_set_source_surface(cr, surface_, 0, 0);
 
     cairo_pattern_t* nothing = cairo_pattern_create_rgba(0, 0, 0, alpha_);
     cairo_mask (cr, nothing);
 
     cairo_fill(cr);
+
+    cairo_restore(cr);
 };
