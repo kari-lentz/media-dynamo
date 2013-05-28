@@ -65,6 +65,10 @@ void dom_context_t::show_text(cairo_t* cr, const char* text)
     }
 
     pango_layout_set_markup(layout_, text, -1);
+
+    PangoContext* context = pango_layout_get_context(layout_);
+    pango_cairo_context_set_alpha(context,  0.5 * 0xffff);
+
     pango_cairo_update_layout(cr, layout_);
 
     pango_cairo_show_layout(cr, layout_);

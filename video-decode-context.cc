@@ -25,7 +25,7 @@ AME_VIDEO_FRAME frame_out;
 
 void video_decode_context::load_cairo_commands()
 {
-    double alpha = 1.0;
+    double alpha = 0.5;
 
     cairo_commands_.push_back( new translate_f( 100, 200 ) );
     cairo_commands_.push_back( new set_source_rgba_f(0.2, 0.8, 0.2, alpha) );
@@ -78,37 +78,11 @@ void video_decode_context::run_commands(cairo_t* cr)
 
 void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
 {
-    cairo_surface_t* cairo_surface_assets;
-    cairo_t* cr_assets;
-
-    cairo_surface_assets = cairo_image_surface_create(
-        CAIRO_FORMAT_ARGB32,
-        frame->width,
-        frame->height);
-
-    if( !cairo_surface_assets )
-    {
-        stringstream ss;
-        ss << "could not create surface" << endl;
-        throw app_fault( "" );
-    }
-
-    cr_assets = cairo_create (cairo_surface_assets);
-    if( !cr_assets )
-    {
-        stringstream ss;
-        ss << "could not create assets surface" << endl;
-        throw app_fault( "" );
-    }
-
-    run_commands(cr_assets);
-
     cairo_surface_t* cairo_surface_video;
     cairo_t* cr_video;
 
     int stride = cairo_format_stride_for_width( CAIRO_FORMAT_ARGB32, frame->width );
 
-/* ... make sure sdlsurf is locked or doesn't need locking ... */
     cairo_surface_video = cairo_image_surface_create_for_data (
         (unsigned char*) frame->raw_data,
         CAIRO_FORMAT_ARGB32,
@@ -116,33 +90,29 @@ void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
         frame->height,
         stride);
 
+    if( !cairo_surface_video  )
+    {
+        stringstream ss;
+        ss << "could not create surface" << endl;
+        throw app_fault( "" );
+    }
+
+    cr_video  = cairo_create (cairo_surface_video);
+    if( !cr_video )
+    {
+        stringstream ss;
+        ss << "could not create assets surface" << endl;
+        throw app_fault( "" );
+    }
+
+    run_commands(cr_video);
+
     cr_video = cairo_create (cairo_surface_video);
     if( !cr_video )
     {
         stringstream ss;
         ss << "could not create video surface" << endl;
         throw app_fault( "" );
-    }
-
-    cairo_set_source_surface(cr_video, cairo_surface_assets, 0, 0);
-
-    cairo_pattern_t* nothing = cairo_pattern_create_rgba(0, 0, 0, 0.25);
-    cairo_mask (cr_video, nothing);
-    cairo_fill(cr_video);
-
-    // destroy assets
-    //
-
-    if( cr_assets )
-    {
-        cairo_destroy( cr_assets );
-        cr_assets = NULL;
-    }
-
-    if( cairo_surface_assets != NULL)
-    {
-        cairo_surface_destroy( cairo_surface_assets );
-        cairo_surface_assets = NULL;
     }
 
     // destroy video
