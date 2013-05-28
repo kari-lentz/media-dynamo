@@ -15,6 +15,7 @@
 
 #include "video-decode-context.h"
 #include "sdl-holder.h"
+#include "asset.h"
 
 using namespace std;
 
@@ -25,8 +26,9 @@ AME_VIDEO_FRAME frame_out;
 
 void video_decode_context::load_cairo_commands()
 {
-    double alpha = 1.0;
+    double alpha = 0.6;
 
+    /*
     cairo_commands_.push_back( new translate_f( 100, 200 ) );
     cairo_commands_.push_back( new set_source_rgba_f(0.2, 0.8, 0.2, alpha) );
     cairo_commands_.push_back( new set_font_family_f( "New Century Schoolbook L" ) );
@@ -45,11 +47,24 @@ void video_decode_context::load_cairo_commands()
 
     cairo_commands_.push_back( new translate_f( 0, 200 ) );
     cairo_commands_.push_back( new set_source_rgba_f(0.8, 0.2, 0.2, alpha) );
+    */
+
+    const char* markup = "There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation.";
+
+    assets_.push_back( new text_asset_t(markup, alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 200, 250, 800, -1) );
+    assets_.push_back( new bitmap_asset_t( "/mnt/MUSIC-THD/test-image-1.png", alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 400, 260, -1, -1) );
+    markup = "Explore the menus and experiment to see what works best.";
+    assets_.push_back( new text_asset_t(markup, alpha, 0.8, 0.2, 0.2, 3000, 30000, 100, 600, 250, 800, -1) );
 }
 
 void video_decode_context::unload_cairo_commands()
 {
     for( list<cairo_f*>::iterator it = cairo_commands_.begin(); it != cairo_commands_.end(); ++it )
+    {
+        delete (*it);
+    }
+
+    for( list<asset_t*>::iterator it = assets_.begin(); it != assets_.end(); ++it )
     {
         delete (*it);
     }

@@ -8,6 +8,7 @@
 #include "vwriter.h"
 #include "synch.h"
 #include "cairo-f.h"
+#include "asset.h"
 
 using namespace std;
 
@@ -33,6 +34,7 @@ private:
     AVFormatContext* oc_;
     FILE* outfile_;
     list<cairo_f*> cairo_commands_;
+    list<asset_t*> assets_;
     int last_pts_ms_;
 
     void load_cairo_commands();

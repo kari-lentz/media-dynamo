@@ -6,7 +6,7 @@ FLAGS_MYSQL := -DMYSQLPP_MYSQL_HEADERS_BURIED
 #define target, object, libraries
 #
 TARGET := ../bin/video-player
-OBJECTS := video-player.o sdl-holder.o dom-context.o cairo-f.o video-decode-context.o audio-decode-context.o audio-silence-context.o render-video.o  
+OBJECTS := video-player.o sdl-holder.o dom-context.o asset.o cairo-f.o video-decode-context.o audio-decode-context.o audio-silence-context.o render-video.o  
 
 CC := g++
 
@@ -34,6 +34,9 @@ sdl-holder.o : sdl-holder.cc sdl-holder.h
 
 dom-context.o : dom-context.cc dom-context.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o dom-context.o dom-context.cc
+
+asset.o : asset.cc asset.h
+	$(CC) $(CPPFLAGS) -c -o asset.o asset.cc	
 
 cairo-f.o : cairo-f.cc cairo-f.h dom-context.h $(INC)
 	$(CC) $(CPPFLAGS) -c -o cairo-f.o cairo-f.cc
