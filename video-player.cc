@@ -523,6 +523,9 @@ int run_play(const char* mp4_file_path)
 
 int main(int argc, char *argv[])
 {
+    cout << "cairo version:" << cairo_version_string() << endl;
+    cout << "pango version:" << pango_version_string() << endl;
+
     av_register_all();
     dom_context_t::register_all();
 
