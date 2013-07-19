@@ -35,7 +35,7 @@ private:
     FILE* outfile_;
     list<asset_t*> assets_;
     int last_pts_ms_;
-    scratch_pad_t* scratch_pad_;
+    scratch_pad_t scratch_pad_;
 
     void load_cairo_commands();
     void unload_cairo_commands();

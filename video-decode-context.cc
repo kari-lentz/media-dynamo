@@ -92,7 +92,7 @@ void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
 
     cairo_set_source_surface(cr_video, cairo_surface_assets, 0, 0);
 
-    cairo_pattern_t* nothing = cairo_pattern_create_rgba(0, 0, 0, 0.25);
+    cairo_pattern_t* nothing = cairo_pattern_create_rgba(0, 0, 0, 1.0);
     cairo_mask (cr_video, nothing);
     cairo_fill(cr_video);
 
@@ -206,19 +206,20 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
 video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay, ready_synch_t* video_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), overlay_(overlay), video_primed_(video_primed), last_pts_ms_(0)
 {
-    scratch_pad_->width = overlay_->pitches[0];
-    scratch_pad_->height = overlay_->h;
-    scratch_pad_->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, overlay_->pitches[0], overlay_->h);
-    scratch_pad_->cr = cairo_create(scratch_pad_->surface);
+    scratch_pad_.width = overlay_->pitches[0];
+    scratch_pad_.height = overlay_->h;
+    scratch_pad_.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, overlay_->pitches[0], overlay_->h);
+    scratch_pad_.cr = cairo_create(scratch_pad_.surface);
 
-    double alpha = 0.6;
+    double alpha = 0.2;
 
-    const char* markup = "There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation.";
+    const char* markup = "<span font='New Century Schoolbook 48' foreground='#22ff22'> There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation.</span>";
 
-    assets_.push_back( new text_asset_t(scratch_pad_, markup, alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 200, 250, 800, -1) );
-    assets_.push_back( new bitmap_asset_t(scratch_pad_, "/mnt/MUSIC-THD/test-image-1.png", alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 400, 260, -1, -1) );
-    markup = "Explore the menus and experiment to see what works best.";
-    assets_.push_back( new text_asset_t(scratch_pad_, markup, alpha, 0.8, 0.2, 0.2, 3000, 30000, 100, 600, 250, 800, -1) );
+    assets_.push_back( new text_asset_t(&scratch_pad_, markup, alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 200, 250, 1200, -1) );
+    assets_.push_back( new bitmap_asset_t(&scratch_pad_, "/mnt/MUSIC-THD/test-image-1.png", alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 400, 260, -1, -1) );
+    markup = "<span font='Helvetica Bold 24' foreground='#dddd88'>  Explore the menus and experiment to see what works best.</span>";
+    alpha = 1.0;
+    assets_.push_back( new text_asset_t(&scratch_pad_, markup, alpha, 0.8, 0.2, 0.2, 3000, 30000, 100, 250, 250, 800, -1) );
 }
 
 video_decode_context::~video_decode_context()
@@ -228,8 +229,8 @@ video_decode_context::~video_decode_context()
         delete (*it);
     }
 
-    cairo_surface_destroy(scratch_pad_->surface);
-    scratch_pad_ = NULL;
+    cairo_surface_destroy(scratch_pad_.surface);
+    cairo_destroy(scratch_pad_.cr);
 }
 
 void video_decode_context::operator()(int start_at)

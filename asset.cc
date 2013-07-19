@@ -151,14 +151,19 @@ bitmap_asset_t::bitmap_asset_t(scratch_pad_t* scratch_pad, const char* path, dou
         }
 
         cairo_set_source_surface(cr, bitmap_surface, 0, 0);
+
+        cairo_pattern_t* nothing = cairo_pattern_create_rgba(0, 0, 0, 1.0);
+        cairo_mask (cr, nothing);
+
         cairo_fill(cr);
 
-        if( !surface )
+        if( !surface_ )
         {
             if(width_ < 0) width_ = cairo_image_surface_get_width(bitmap_surface);
             if(height_ < 0) height_ = cairo_image_surface_get_height(bitmap_surface);
 
             surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width_, height_);
+
             cr_ = cairo_create( surface_ );
         }
         else

@@ -12,11 +12,14 @@ typedef struct
     uint8_t b;
 } ARGB;
 
-const int MAX_SCREEN_WIDTH = 1024;
-const int MAX_SCREEN_HEIGHT = 768;
+//const int MAX_SCREEN_WIDTH = 1024;
+//const int MAX_SCREEN_HEIGHT = 768;
 
 //const int MAX_SCREEN_WIDTH = 1536;
 //const int MAX_SCREEN_HEIGHT= 864;
+
+const int MAX_SCREEN_WIDTH = 1920;
+const int MAX_SCREEN_HEIGHT = 1080;
 
 typedef struct
 {
