@@ -9,6 +9,14 @@
 
 using namespace std;
 
+typedef struct
+{
+    cairo_t* cr;
+    cairo_surface_t* surface;
+    int width;
+    int height;
+} scratch_pad_t;
+
 class asset_t
 {
 protected:
@@ -42,11 +50,9 @@ class text_asset_t:public asset_t
 {
 private:
     string markup_;
-    PangoLayout* layout_;
-    PangoFontDescription* desc_;
 
 public:
-    text_asset_t(const char* markup, double alpha, double r, double g, double a, int begin_ms, int end_ms, int x, int y, int z, int width, int height);
+    text_asset_t(scratch_pad_t* scratch_pad, const char* markup, double alpha, double r, double g, double a, int begin_ms, int end_ms, int x, int y, int z, int width, int height);
     ~text_asset_t();
 };
 
@@ -54,12 +60,10 @@ class bitmap_asset_t:public asset_t
 {
 private:
     string path_;
-    cairo_surface_t* bitmap_surface_;
-    cairo_t* bitmap_cr_;
 
 public:
 
-    bitmap_asset_t(const char* path, double alpha, double r, double g, double a, int begin_ms, int end_ms, int x, int y, int z, int width, int height);
+    bitmap_asset_t(scratch_pad_t* scratch_pad, const char* path, double alpha, double r, double g, double a, int begin_ms, int end_ms, int x, int y, int z, int width, int height);
     ~bitmap_asset_t();
 };
 

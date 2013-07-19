@@ -24,52 +24,6 @@ template <> logger_t decode_context<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
 AME_MIXER_FRAME frame_mix;
 AME_VIDEO_FRAME frame_out;
 
-void video_decode_context::load_cairo_commands()
-{
-    double alpha = 0.6;
-
-    /*
-    cairo_commands_.push_back( new translate_f( 100, 200 ) );
-    cairo_commands_.push_back( new set_source_rgba_f(0.2, 0.8, 0.2, alpha) );
-    cairo_commands_.push_back( new set_font_family_f( "New Century Schoolbook L" ) );
-    cairo_commands_.push_back( new set_font_weight_f( eWeightBold ) );
-    cairo_commands_.push_back( new set_font_size_f( 24 ) );
-    cairo_commands_.push_back( new set_layout_width_f( 800 ) );
-    cairo_commands_.push_back( new show_text_f( "There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation."));
-    //cairo_commands_.push_back( new push_f() );
-    //cairo_commands_.push_back( new set_font_style_f( eStyleItalic ) );
-    //cairo_commands_.push_back( new show_text_f( "Clarity is the key." ) );
-    //cairo_commands_.push_back( new pop_f() );
-    cairo_commands_.push_back( new translate_f( 0, 200 ) );
-    cairo_commands_.push_back( new show_png_f( "/mnt/MUSIC-THD/test-image-1.png", 400, 300, alpha ) );
-    cairo_commands_.push_back( new set_source_rgba_f(0.8, 0.2, 0.2, alpha) );
-    cairo_commands_.push_back( new show_text_f( "Explore the menus and experiment to see what works best.") );
-
-    cairo_commands_.push_back( new translate_f( 0, 200 ) );
-    cairo_commands_.push_back( new set_source_rgba_f(0.8, 0.2, 0.2, alpha) );
-    */
-
-    const char* markup = "There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation.";
-
-    assets_.push_back( new text_asset_t(markup, alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 200, 250, 800, -1) );
-    assets_.push_back( new bitmap_asset_t( "/mnt/MUSIC-THD/test-image-1.png", alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 400, 260, -1, -1) );
-    markup = "Explore the menus and experiment to see what works best.";
-    assets_.push_back( new text_asset_t(markup, alpha, 0.8, 0.2, 0.2, 3000, 30000, 100, 600, 250, 800, -1) );
-}
-
-void video_decode_context::unload_cairo_commands()
-{
-    for( list<cairo_f*>::iterator it = cairo_commands_.begin(); it != cairo_commands_.end(); ++it )
-    {
-        delete (*it);
-    }
-
-    for( list<asset_t*>::iterator it = assets_.begin(); it != assets_.end(); ++it )
-    {
-        delete (*it);
-    }
-}
-
 void video_decode_context::buffer_primed()
 {
     video_primed_->signal(true);
@@ -77,18 +31,15 @@ void video_decode_context::buffer_primed()
 
 void video_decode_context::run_commands(cairo_t* cr)
 {
-    dom_context_stack_t dom_context_stack(cr);
-
-    for( list<cairo_f*>::iterator it = cairo_commands_.begin(); it != cairo_commands_.end(); ++it )
+    for( list<asset_t*>::iterator it = assets_.begin(); it != assets_.end(); ++it )
     {
-        (*it)->render(cr, dom_context_stack);
+        (*it)->render(cr);
     }
 
     stringstream ss;
     ss << last_pts_ms_ / 1000 << " s";
     string time_str = ss.str();
     //logger << "WRITE:" << last_pts_ms_ << " ms " << buffer_->get_available_samples()  << endl;
-    show_text_f( time_str.c_str()).render(cr, dom_context_stack);
 }
 
 void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
@@ -255,12 +206,30 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
 video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay, ready_synch_t* video_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), overlay_(overlay), video_primed_(video_primed), last_pts_ms_(0)
 {
-    load_cairo_commands();
+    scratch_pad_->width = overlay_->pitches[0];
+    scratch_pad_->height = overlay_->h;
+    scratch_pad_->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, overlay_->pitches[0], overlay_->h);
+    scratch_pad_->cr = cairo_create(scratch_pad_->surface);
+
+    double alpha = 0.6;
+
+    const char* markup = "There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation.";
+
+    assets_.push_back( new text_asset_t(scratch_pad_, markup, alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 200, 250, 800, -1) );
+    assets_.push_back( new bitmap_asset_t(scratch_pad_, "/mnt/MUSIC-THD/test-image-1.png", alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 400, 260, -1, -1) );
+    markup = "Explore the menus and experiment to see what works best.";
+    assets_.push_back( new text_asset_t(scratch_pad_, markup, alpha, 0.8, 0.2, 0.2, 3000, 30000, 100, 600, 250, 800, -1) );
 }
 
 video_decode_context::~video_decode_context()
 {
-    unload_cairo_commands();
+    for( list<asset_t*>::iterator it = assets_.begin(); it != assets_.end(); ++it )
+    {
+        delete (*it);
+    }
+
+    cairo_surface_destroy(scratch_pad_->surface);
+    scratch_pad_ = NULL;
 }
 
 void video_decode_context::operator()(int start_at)
