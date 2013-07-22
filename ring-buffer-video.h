@@ -25,25 +25,23 @@ typedef struct
 {
     int width;
     int height;
-    uint8_t* data[4];
-    uint8_t raw_data[ 4 * MAX_SCREEN_WIDTH * MAX_SCREEN_HEIGHT ];
-    int linesize[ 4 ];
-} AME_MIXER_FRAME;
-
-typedef struct
-{
-    int width;
-    int height;
     int pts_ms;
     bool played_p;
     bool skipped_p;
-    int linesize[ 3 ];
-    uint8_t* data[ 3 ];
-    uint8_t y_data[ 1920 * 1080 ];
-    uint8_t u_data[ 1920 * 1080 / 2 ];
-    uint8_t v_data[ 1920 * 1080 / 2 ];
+    uint8_t* data[4];
+    uint8_t raw_data[ 4 * MAX_SCREEN_WIDTH * MAX_SCREEN_HEIGHT ];
+    int linesize[ 4 ];
 } AME_VIDEO_FRAME;
 
-typedef ring_buffer<AME_VIDEO_FRAME> ring_buffer_video_t;
+class ring_buffer_video_t:public ring_buffer<AME_VIDEO_FRAME>
+{
+public:
+    int width_;
+    int height_;
+
+    ring_buffer_video_t(size_t frames_per_period, size_t periods, int width, int height):ring_buffer<AME_VIDEO_FRAME>(frames_per_period, periods), width_(width), height_(height)
+    {
+    }
+};
 
 #endif

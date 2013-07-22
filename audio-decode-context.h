@@ -14,7 +14,6 @@ typedef struct
     int start_at;
     ring_buffer_audio_t* ring_buffer;
     ready_synch_t* buffer_ready;
-    ready_synch_t* audio_primed;
     bool run_p;
     bool debug_p;
     int ret;
@@ -26,7 +25,6 @@ private:
     ring_buffer_audio_t* buffer_;
     int frame_out_idx_;
     AME_AUDIO_FRAME frame_out_;
-    ready_synch_t* audio_primed_;
 
     specific_streamer<audio_decode_context, AME_AUDIO_FRAME> functor_;
 
@@ -39,7 +37,7 @@ private:
 
 public:
 
-    audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer, ready_synch_t* audio_primed);
+    audio_decode_context(const char* mp4_file_path, ring_buffer_audio_t* ring_buffer);
     ~audio_decode_context();
 
     void operator()(int start_at = 0);

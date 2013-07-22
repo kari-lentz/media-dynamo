@@ -12,7 +12,9 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <SDL/SDL.h>
 
+#include "messages.h"
 #include "video-decode-context.h"
 #include "sdl-holder.h"
 #include "asset.h"
@@ -21,12 +23,9 @@ using namespace std;
 
 template <> logger_t decode_context<AME_VIDEO_FRAME>::logger("VIDEO-PLAYER");
 
-AME_MIXER_FRAME frame_mix;
-AME_VIDEO_FRAME frame_out;
-
 void video_decode_context::buffer_primed()
 {
-    video_primed_->signal(true);
+    post_message( MY_VIDEO_PRIMED );
 }
 
 void video_decode_context::run_commands(cairo_t* cr)
@@ -35,14 +34,9 @@ void video_decode_context::run_commands(cairo_t* cr)
     {
         (*it)->render(cr);
     }
-
-    stringstream ss;
-    ss << last_pts_ms_ / 1000 << " s";
-    string time_str = ss.str();
-    //logger << "WRITE:" << last_pts_ms_ << " ms " << buffer_->get_available_samples()  << endl;
 }
 
-void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
+void video_decode_context::with_cairo(AME_VIDEO_FRAME* frame)
 {
     cairo_surface_t* cairo_surface_assets;
     cairo_t* cr_assets;
@@ -129,20 +123,23 @@ void video_decode_context::with_cairo(AME_MIXER_FRAME* frame)
 
 void video_decode_context::write_frame(AVFrame* frame_in)
 {
+    AME_VIDEO_FRAME frame_out;
+
     int best_pts = av_frame_get_best_effort_timestamp(frame_in) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
     last_pts_ms_ = best_pts;
     //int pkt_pts = frame_in->pkt_dts * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
 
     AVCodecContext* codec_context = get_codec_context();
 
-    frame_mix.width = overlay_->pitches[0];
-    frame_mix.height = overlay_->h;
+    frame_out.width = buffer_->width_;
+    frame_out.height = buffer_->height_;
 
-    SwsContext*  sws_context = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, frame_mix.width, frame_mix.height, PIX_FMT_RGB32, SWS_BICUBIC, 0, 0, 0);
+    if(!sws_context_mix_ )
+    {
+        sws_context_mix_ = sws_getContext(frame_in->width, frame_in->height, (PixelFormat) frame_in->format, frame_out.width, frame_out.height, PIX_FMT_RGB32, SWS_BICUBIC, 0, 0, 0);
+    }
 
-    //PIX_FMT_YUV420P
-
-    if( !sws_context )
+    if( !sws_context_mix_ )
     {
         stringstream ss;
         ss << "failed to get scale context";
@@ -151,64 +148,46 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
     //Scale the raw data/convert it to our video buffer...
     //
-    frame_mix.data[0] = frame_mix.raw_data;
-    frame_mix.data[1] = NULL;
-    frame_mix.data[2] = NULL;
-    frame_mix.data[3] = NULL;
+    frame_out.data[0] = frame_out.raw_data;
+    frame_out.data[1] = NULL;
+    frame_out.data[2] = NULL;
+    frame_out.data[3] = NULL;
 
-    frame_mix.linesize[ 0 ] = 4 * frame_mix.width;
-    frame_mix.linesize[ 1 ] = 0;
-    frame_mix.linesize[ 2 ] = 0;
-    frame_mix.linesize[ 3 ] = 0;
+    frame_out.linesize[ 0 ] = 4 * frame_out.width;
+    frame_out.linesize[ 1 ] = 0;
+    frame_out.linesize[ 2 ] = 0;
+    frame_out.linesize[ 3 ] = 0;
 
-    sws_scale(sws_context, frame_in->data, frame_in->linesize, 0, frame_in->height, frame_mix.data, frame_mix.linesize);
+    sws_scale(sws_context_mix_, frame_in->data, frame_in->linesize, 0, frame_in->height, frame_out.data, frame_out.linesize);
 
-    av_free( sws_context );
-
-    with_cairo(&frame_mix);
-
-    sws_context = sws_getContext(overlay_->pitches[0], overlay_->h, PIX_FMT_RGB32, overlay_->pitches[0], overlay_->h, PIX_FMT_YUV420P, SWS_BICUBIC, 0, 0, 0);
-
-    if( !sws_context )
-    {
-        stringstream ss;
-        ss << "failed to get scale context";
-        throw app_fault( ss.str().c_str() );
-    }
-
-    //Scale the raw data/convert it to our video buffer...
-    //
-    frame_out.data[0] = frame_out.y_data;
-    frame_out.data[1] = frame_out.u_data;
-    frame_out.data[2] = frame_out.v_data;
-
-    frame_out.linesize[ 0 ] = overlay_->pitches[ 0 ];
-    frame_out.linesize[ 2 ] = overlay_->pitches[ 1 ];
-    frame_out.linesize[ 1 ] = overlay_->pitches[ 2 ];
-
-    sws_scale(sws_context, frame_mix.data, frame_mix.linesize, 0, overlay_->h, frame_out.data, frame_out.linesize);
-
-    av_free( sws_context );
+    with_cairo(&frame_out);
 
     frame_out.pts_ms = best_pts;
 
     // logger << "PTS:" << last_pts_ms_ << endl;
 
-    frame_out.width = codec_context->width;
-    frame_out.height = codec_context->height;
+    frame_out.width = buffer_->width_;
+    frame_out.height = buffer_->height_;
     frame_out.played_p = false;
     frame_out.skipped_p = false;
 
     int ret = vwriter<AME_VIDEO_FRAME>(buffer_, false)( &frame_out, 1);
 
+    /*
+    stringstream ss;
+    ss << last_pts_ms_ / 1000 << " s";
+    string time_str = ss.str();
+    logger << "WRITE:" << last_pts_ms_ << " ms " << buffer_->get_available_samples()  << endl;
+    */
+
     if( ret <= 0 ) throw decode_done_t();
 }
 
-video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer, SDL_Overlay* overlay, ready_synch_t* video_primed):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), overlay_(overlay), video_primed_(video_primed), last_pts_ms_(0)
+video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), last_pts_ms_(0),sws_context_mix_(NULL), sws_context_out_(NULL)
 {
-    scratch_pad_.width = overlay_->pitches[0];
-    scratch_pad_.height = overlay_->h;
-    scratch_pad_.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, overlay_->pitches[0], overlay_->h);
+    scratch_pad_.width = buffer_->width_;
+    scratch_pad_.height = buffer_->height_;
+    scratch_pad_.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, buffer_->width_, buffer_->height_);
     scratch_pad_.cr = cairo_create(scratch_pad_.surface);
 
     double alpha = 0.2;
@@ -224,6 +203,9 @@ video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffe
 
 video_decode_context::~video_decode_context()
 {
+    if( sws_context_mix_ ) av_free( sws_context_mix_ );
+    if( sws_context_out_ ) av_free( sws_context_out_ );
+
     for( list<asset_t*>::iterator it = assets_.begin(); it != assets_.end(); ++it )
     {
         delete (*it);

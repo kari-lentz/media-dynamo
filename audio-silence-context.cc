@@ -33,16 +33,16 @@ void audio_silence_context::write_frame()
 
     frame_out.samples = AUDIO_PACKET_SIZE;
 
-    //caux_video << "AUDIO BEGIN DECODDE FRAME at:" << best_pts << endl;
+    //logger_ << "AUDIO BEGIN DECODDE FRAME at:" << frame_out.pts_ms << endl;
     int ret = vwriter<AME_AUDIO_FRAME>(buffer_, false)( &frame_out, 1);
-    //caux_video << "AUDIO END DECODDE FRAME at:" << best_pts << ":" << ret << endl;
+    //logger_ << "AUDIO END DECODDE FRAME at:" << frame_out.pts_ms << ":" << ret << endl;
 
     if( ret <= 0 ) throw decode_done_t();
 
-    //logger << "WROTE TO AUDIO BUFFER:" << samples << endl;
+    //logger_ << "WROTE SILENCE TO AUDIO BUFFER:" << frame_out.samples << endl;
 }
 
-audio_silence_context::audio_silence_context(ring_buffer_audio_t* ring_buffer, ready_synch_t* audio_primed):buffer_( ring_buffer ), audio_primed_(audio_primed), logger_("AUDIO-PLAYER"), min_frames_( ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) )
+audio_silence_context::audio_silence_context(ring_buffer_audio_t* ring_buffer):buffer_( ring_buffer ), logger_("AUDIO-PLAYER"), min_frames_( ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) )
 {
 }
 
@@ -63,8 +63,9 @@ void audio_silence_context::operator()()
             {
                 if( frames >= min_frames_ )
                 {
+
                     primed = true;
-                    audio_primed_->signal(true);
+                    post_message(buffer_->primed_message_);
                 }
 
                 ++frames;

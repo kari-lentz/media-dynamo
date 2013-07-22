@@ -12,7 +12,6 @@ typedef struct
     int channel;
     ring_buffer_audio_t* ring_buffer;
     ready_synch_t* buffer_ready;
-    ready_synch_t* audio_primed;
     bool run_p;
     bool debug_p;
     int ret;
@@ -22,7 +21,7 @@ class audio_silence_context
 {
 private:
     ring_buffer_audio_t* buffer_;
-    ready_synch_t* audio_primed_;
+
     logger_t logger_;
     int min_frames_;
 
@@ -32,7 +31,7 @@ private:
 
 public:
 
-    audio_silence_context( ring_buffer_audio_t* ring_buffer, ready_synch_t* audio_primed);
+    audio_silence_context( ring_buffer_audio_t* ring_buffer);
     ~audio_silence_context();
 
     void operator()();
