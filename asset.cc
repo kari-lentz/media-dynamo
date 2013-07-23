@@ -50,6 +50,11 @@ asset_t::~asset_t()
     }
 }
 
+bool asset_t::is_visible(int media_ms)
+{
+    return (begin_ms_ < 0 || media_ms >= begin_ms_) && (end_ms_ < 0 || media_ms <= end_ms_);
+}
+
 void asset_t::render(cairo_t* cr)
 {
     cairo_set_source_surface(cr, surface_, x_, y_);

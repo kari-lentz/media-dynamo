@@ -43,6 +43,7 @@ public:
 
     ~asset_t();
 
+    bool is_visible(int media_ms);
     virtual void render(cairo_t* cr);
 };
 

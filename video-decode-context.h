@@ -39,13 +39,15 @@ private:
     void load_cairo_commands();
     void unload_cairo_commands();
 
-    void run_commands(cairo_t* cr);
+    void run_commands(cairo_t* cr, int media_ms);
 
     void using_cairo(AME_VIDEO_FRAME* frame, cairo_t* cr);
     void with_cairo(AME_VIDEO_FRAME* frame);
 
     void buffer_primed();
     void write_frame(AVFrame* frame_in);
+
+    void test_assets();
 
 public:
 

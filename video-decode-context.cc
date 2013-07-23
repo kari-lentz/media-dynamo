@@ -28,11 +28,14 @@ void video_decode_context::buffer_primed()
     post_message( MY_VIDEO_PRIMED );
 }
 
-void video_decode_context::run_commands(cairo_t* cr)
+void video_decode_context::run_commands(cairo_t* cr, int media_ms)
 {
     for( list<asset_t*>::iterator it = assets_.begin(); it != assets_.end(); ++it )
     {
-        (*it)->render(cr);
+        if( (*it)->is_visible(media_ms) )
+        {
+            (*it)->render(cr);
+        }
     }
 }
 
@@ -61,7 +64,7 @@ void video_decode_context::with_cairo(AME_VIDEO_FRAME* frame)
         throw app_fault( "" );
     }
 
-    run_commands(cr_assets);
+    run_commands(cr_assets, frame->pts_ms);
 
     cairo_surface_t* cairo_surface_video;
     cairo_t* cr_video;
@@ -160,8 +163,6 @@ void video_decode_context::write_frame(AVFrame* frame_in)
 
     sws_scale(sws_context_mix_, frame_in->data, frame_in->linesize, 0, frame_in->height, frame_out.data, frame_out.linesize);
 
-    with_cairo(&frame_out);
-
     frame_out.pts_ms = best_pts;
 
     // logger << "PTS:" << last_pts_ms_ << endl;
@@ -170,6 +171,8 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     frame_out.height = buffer_->height_;
     frame_out.played_p = false;
     frame_out.skipped_p = false;
+
+    with_cairo(&frame_out);
 
     int ret = vwriter<AME_VIDEO_FRAME>(buffer_, false)( &frame_out, 1);
 
@@ -183,6 +186,19 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     if( ret <= 0 ) throw decode_done_t();
 }
 
+void video_decode_context::test_assets()
+{
+   double alpha = 0.2;
+
+   const char* markup = "<span font='New Century Schoolbook 48' foreground='#22ff22'> There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation.</span>";
+
+   assets_.push_back( new text_asset_t(&scratch_pad_, markup, alpha, 0.2, 0.8, 0.4, 3000, -1, 100, 200, 250, 1200, -1) );
+   assets_.push_back( new bitmap_asset_t(&scratch_pad_, "/mnt/MUSIC-THD/test-image-1.png", alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 400, 260, -1, -1) );
+   markup = "<span font='Helvetica Bold 24' foreground='#dddd88'>  Explore the menus and experiment to see what works best.</span>";
+   alpha = 1.0;
+   assets_.push_back( new text_asset_t(&scratch_pad_, markup, alpha, 0.8, 0.2, 0.2, -1, 6000, 100, 250, 250, 800, -1) );
+}
+
 video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffer_video_t* ring_buffer):decode_context(mp4_file_path, AVMEDIA_TYPE_VIDEO, &avcodec_decode_video2, ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) - ring_buffer->get_available_samples()),buffer_( ring_buffer ), last_pts_ms_(0),sws_context_mix_(NULL), sws_context_out_(NULL)
 {
     scratch_pad_.width = buffer_->width_;
@@ -190,15 +206,7 @@ video_decode_context::video_decode_context(const char* mp4_file_path, ring_buffe
     scratch_pad_.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, buffer_->width_, buffer_->height_);
     scratch_pad_.cr = cairo_create(scratch_pad_.surface);
 
-    double alpha = 0.2;
-
-    const char* markup = "<span font='New Century Schoolbook 48' foreground='#22ff22'> There are various combinations of <span foreground='#ffff00' style='italic'>fonts</span> and colors.  They need to be well layed out for an effective presentation.</span>";
-
-    assets_.push_back( new text_asset_t(&scratch_pad_, markup, alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 200, 250, 1200, -1) );
-    assets_.push_back( new bitmap_asset_t(&scratch_pad_, "/mnt/MUSIC-THD/test-image-1.png", alpha, 0.2, 0.8, 0.4, 3000, 30000, 100, 400, 260, -1, -1) );
-    markup = "<span font='Helvetica Bold 24' foreground='#dddd88'>  Explore the menus and experiment to see what works best.</span>";
-    alpha = 1.0;
-    assets_.push_back( new text_asset_t(&scratch_pad_, markup, alpha, 0.8, 0.2, 0.2, 3000, 30000, 100, 250, 250, 800, -1) );
+    test_assets();
 }
 
 video_decode_context::~video_decode_context()
