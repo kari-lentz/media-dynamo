@@ -17,9 +17,13 @@ class sdl_holder:public render<AME_VIDEO_FRAME>
 {
 private:
 
-    int num_audio_zones_;
+    ring_buffer_video_t* ring_buffer_video_;
+    ring_buffer_audio_t* ring_buffers_audio_;
 
+    int num_audio_zones_;
     list<pthread_t*>& threads_;
+
+    bool fullscreen_p_;
 
     SDL_Surface* surface_;
     specific_streamer<sdl_holder, AME_VIDEO_FRAME> functor_;
@@ -30,12 +34,12 @@ protected:
 
 public:
 
-    sdl_holder(int num_audio_zones, list<pthread_t*>& threads);
+    sdl_holder(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, int num_audio_zones, list<pthread_t*>& threads, bool fullscreen_p);
     ~sdl_holder();
 
     static logger_t logger;
 
-    void message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, ready_synch_t* buffer_ready, ready_synch_t* audio_ready);
+    void message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_ready);
 
 };
 

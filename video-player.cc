@@ -33,6 +33,7 @@ static const unsigned long STDIN_MAX = 1000000;
 using namespace std;
 
 logger_t logger("VIDEO-PLAYER");
+bool g_fullscreen_p = false;
 
 int getenv_numeric( const char* szname, int default_val )
 {
@@ -278,7 +279,7 @@ static void* render_audio_thread(void *parg)
     return &penv->ret;
 }
 
-int run_play(const char* mp4_file_path)
+int run_play(const char* mp4_file_path, bool fullscreen_p)
 {
     int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", MAX_SCREEN_WIDTH);
     int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", MAX_SCREEN_HEIGHT);
@@ -291,6 +292,8 @@ int run_play(const char* mp4_file_path)
     int WAIT_TIMEOUT = getenv_numeric( "WAIT_TIMEOUT", 2000 );
 
     ring_buffer_video_t ring_buffer_video(24,  6, MAX_SCREEN_WIDTH, MAX_SCREEN_HEIGHT);
+    ring_buffer_audio_t pcm_buffers[ 4  ];
+
     env_video_decode_context env_vdc;
     env_audio_decode_context env_adc;
     env_audio_silence_context env_asc[3];
@@ -303,7 +306,7 @@ int run_play(const char* mp4_file_path)
     pthread_t thread_vfc, thread_afc, thread_asc[3], thread_render_audio;
     list<pthread_t*> threads;
 
-    logger << "welecome to media dynamo" << endl;
+    logger << "welcome to media dynamo" << endl;
 
     // set up the silence threads
     //
@@ -322,7 +325,7 @@ int run_play(const char* mp4_file_path)
 
     try
     {
-        sdl_holder sdl(NUM_CHANNELS, threads);
+        sdl_holder sdl(&ring_buffer_video, &pcm_buffers[0], NUM_CHANNELS, threads, fullscreen_p);
 
         //set up the video decode
         //
@@ -341,11 +344,6 @@ int run_play(const char* mp4_file_path)
             ss << "video file thread create error:"  << strerror( ret );
             throw app_fault( ss.str().c_str() );
         }
-
-        //set up the audio decode
-        //
-
-        ring_buffer_audio_t pcm_buffers[ 4  ];
 
         env_adc.mp4_file_path = mp4_file_path;
         env_adc.channel = audio_channel;
@@ -409,7 +407,7 @@ int run_play(const char* mp4_file_path)
 
         //main SDL loop for everything
         //
-        sdl.message_loop(&ring_buffer_video, &pcm_buffers[0], &buffer_ready, &audio_ready);
+        sdl.message_loop(&buffer_ready, &audio_ready);
     }
     catch(app_fault& e)
     {
@@ -430,10 +428,62 @@ int run_play(const char* mp4_file_path)
     return ret;
 }
 
+string process_param(const char* szparam)
+{
+    string param = szparam;
+
+    int len = param.length();
+    bool prefix_p = true;
+    string ret;
+
+    for( int idx = 0; idx < len; ++idx )
+    {
+        char c = param[ idx ];
+
+        if(prefix_p)
+        {
+            if(c != '-')
+            {
+                prefix_p = false;
+            }
+        }
+
+        if( !prefix_p )
+        {
+            if( c >= 'A' && c <= 'Z' )
+            {
+                ret.push_back( c  + 33 );
+            }
+            else
+            {
+                ret.push_back(c);
+            }
+        }
+    }
+
+    return ret;
+}
+
+void parse_cmdline(int argc, char *argv[])
+{
+    string param;
+
+    for(int idx = 1; idx < argc; ++idx)
+    {
+        param = process_param( argv[ idx ] );
+        if( param == "fullscreen")
+        {
+            g_fullscreen_p = true;
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     av_register_all();
     dom_context_t::register_all();
+
+    parse_cmdline(argc, argv);
 
     if (av_lockmgr_register(lockmgr))
     {
@@ -447,7 +497,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int ret = run_play( "/mnt/MUSIC-THD/test.hd.mp4" );
+    int ret = run_play( "/mnt/MUSIC-THD/test.hd.mp4", g_fullscreen_p );
 
     av_lockmgr_register(NULL);
 

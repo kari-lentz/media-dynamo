@@ -44,8 +44,28 @@ uint32_t sdl_holder::get_media_ms()
     return SDL_GetTicks();
 }
 
-sdl_holder::sdl_holder(int num_audio_zones, list<pthread_t*>& threads):render<AME_VIDEO_FRAME>( "VIDEO-PLAYER"), num_audio_zones_(num_audio_zones), threads_(threads), surface_(NULL),functor_(this, &sdl_holder::render_earliest_frame)
+sdl_holder::sdl_holder(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, int num_audio_zones, list<pthread_t*>& threads, bool fullscreen_p):render<AME_VIDEO_FRAME>( "VIDEO-PLAYER"), ring_buffer_video_(ring_buffer_video), ring_buffers_audio_(ring_buffers_audio), num_audio_zones_(num_audio_zones), threads_(threads), fullscreen_p_(fullscreen_p), surface_(NULL),functor_(this, &sdl_holder::render_earliest_frame)
 {
+    int options = SDL_RESIZABLE | SDL_ASYNCBLIT | SDL_HWACCEL | SDL_DOUBLEBUF;
+
+    if( fullscreen_p_ )
+    {
+        logger << "using fullscreen" << endl;
+        options |= SDL_FULLSCREEN;
+    }
+    else
+    {
+        logger << "using windowed screen" << endl;
+    }
+
+    surface_ = SDL_SetVideoMode(ring_buffer_video->width_, ring_buffer_video->height_, 0, options);
+
+    if(!surface_)
+    {
+        stringstream ss;
+        ss << "SDL: could not set video mode - exiting";
+        throw app_fault( ss.str().c_str() );
+    }
 }
 
 sdl_holder::~sdl_holder()
@@ -64,21 +84,12 @@ sdl_holder::~sdl_holder()
     logger << "sdl-holder destroyed" << endl;
 }
 
-void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffer_audio_t* ring_buffers_audio, ready_synch_t* buffer_ready, ready_synch_t* audio_ready)
+void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_ready)
 {
 
     logger << "CREATING THE SURFACES" << endl;
 
 /* ... make sure sdlsurf is locked or doesn't need locking ... */
-
-    surface_ = SDL_SetVideoMode(ring_buffer_video->width_, ring_buffer_video->height_, 0, SDL_RESIZABLE | SDL_ASYNCBLIT | SDL_HWACCEL | SDL_DOUBLEBUF);
-
-    if(!surface_)
-    {
-        stringstream ss;
-        ss << "SDL: could not set video mode - exiting";
-        throw app_fault( ss.str().c_str() );
-    }
 
     SDL_Event event;
     bool audio_zone_primed_p[ 4 ] = {false, false, false, false};
@@ -90,15 +101,15 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
     {
         if(audio_primed_p && video_primed_p)
         {
-            ring_buffer_video->read_avail( &functor_ );
+            ring_buffer_video_->read_avail( &functor_ );
 
-            if( ring_buffer_video->is_done() )
+            if( ring_buffer_video_->is_done() )
             {
                 logger << "closing out audio buffers" << endl;
 
                 for(int idx = 0; idx < num_audio_zones_; ++idx)
                 {
-                    (&ring_buffers_audio[ idx ])->close_out();
+                    (&ring_buffers_audio_[ idx ])->close_out();
                 }
 
                 break;
@@ -141,7 +152,7 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
                 {
                     if( ctrl_down_p && code == SDLK_x )
                     {
-                        ring_buffer_video->close_out();
+                        ring_buffer_video_->close_out();
                     }
                 }
 
@@ -192,7 +203,7 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
             case MY_DONE:
             case SDL_QUIT:
                 logger << "The primary quit event detected" << endl;
-                ring_buffer_video->close_out();
+                ring_buffer_video_->close_out();
 
                 break;
             }
