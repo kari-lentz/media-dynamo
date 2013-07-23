@@ -96,24 +96,28 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_
     bool audio_primed_p = false;
     bool video_primed_p = false;
     bool ctrl_down_p = false;
+    bool quitting_p = false;
 
     while( 1 )
     {
-        if(audio_primed_p && video_primed_p)
+        if( quitting_p )
+        {
+            ring_buffer_video_->close_out();
+
+            logger << "closing out audio buffers" << endl;
+
+            for(int idx = 0; idx < num_audio_zones_; ++idx)
+            {
+                (&ring_buffers_audio_[ idx ])->close_out();
+            }
+
+            audio_ready->broadcast( false );
+
+            break;
+        }
+        else if(audio_primed_p && video_primed_p)
         {
             ring_buffer_video_->read_avail( &functor_ );
-
-            if( ring_buffer_video_->is_done() )
-            {
-                logger << "closing out audio buffers" << endl;
-
-                for(int idx = 0; idx < num_audio_zones_; ++idx)
-                {
-                    (&ring_buffers_audio_[ idx ])->close_out();
-                }
-
-                break;
-            }
         }
         else if( !audio_primed_p )
         {
@@ -152,7 +156,7 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_
                 {
                     if( ctrl_down_p && code == SDLK_x )
                     {
-                        ring_buffer_video_->close_out();
+                        quitting_p = true;
                     }
                 }
 
@@ -203,7 +207,7 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_
             case MY_DONE:
             case SDL_QUIT:
                 logger << "The primary quit event detected" << endl;
-                ring_buffer_video_->close_out();
+                quitting_p = true;
 
                 break;
             }

@@ -117,7 +117,6 @@ static void* video_decode_context_thread(void *parg)
     {
         video_decode_context vdc(penv->mp4_file_path, penv->ring_buffer);
         if(penv->run_p) vdc();
-        caux_video << "decode operation complete" << endl;
         penv->ret = 0;
     }
     catch( app_fault& e )
@@ -137,6 +136,7 @@ static void* video_decode_context_thread(void *parg)
     }
 
     post_message( MY_DONE );
+    caux_video << "video decode operation complete" << endl;
 
     return &penv->ret;
 }
@@ -157,7 +157,6 @@ static void* audio_decode_context_thread(void *parg)
 
         audio_decode_context adc(penv->mp4_file_path, penv->ring_buffer);
         if(penv->run_p) adc();
-        logger << "decode operation complete" << endl;
         penv->ret = 0;
     }
     catch( app_fault& e )
@@ -177,6 +176,7 @@ static void* audio_decode_context_thread(void *parg)
     }
 
     if(penv->run_p) post_message( MY_DONE);
+    logger << "audio decode operation complete" << endl;
 
     return &penv->ret;
 }
@@ -197,7 +197,6 @@ static void* audio_silence_context_thread(void *parg)
         audio_silence_context asc(penv->ring_buffer);
 
         if(penv->run_p) asc();
-        logger << "silence operation complete" << endl;
         penv->ret = 0;
     }
     catch( app_fault& e )
@@ -217,6 +216,7 @@ static void* audio_silence_context_thread(void *parg)
     }
 
     if(penv->run_p) post_message(MY_DONE);
+    logger << "silence operation complete" << endl;
 
     return &penv->ret;
 }
@@ -275,6 +275,7 @@ static void* render_audio_thread(void *parg)
     }
 
     if(penv->run_p) post_message(MY_DONE);
+    logger << "render audio operation complete" << endl;
 
     return &penv->ret;
 }

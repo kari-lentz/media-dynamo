@@ -83,8 +83,6 @@ void audio_silence_context::operator()()
         logger_ << e;
         vwriter<AME_AUDIO_FRAME>(buffer_, false).error();
     }
-
-    logger_ << "killed silence" << endl;;
 }
 
 
