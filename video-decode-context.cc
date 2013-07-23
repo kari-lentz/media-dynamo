@@ -124,7 +124,7 @@ void video_decode_context::with_cairo(AME_VIDEO_FRAME* frame)
     }
 }
 
-void video_decode_context::write_frame(AVFrame* frame_in)
+void video_decode_context::write_frame(AVFrame* frame_in, int start_at)
 {
     AME_VIDEO_FRAME frame_out;
 
@@ -164,6 +164,7 @@ void video_decode_context::write_frame(AVFrame* frame_in)
     sws_scale(sws_context_mix_, frame_in->data, frame_in->linesize, 0, frame_in->height, frame_out.data, frame_out.linesize);
 
     frame_out.pts_ms = best_pts;
+    frame_out.start_at = start_at;
 
     // logger << "PTS:" << last_pts_ms_ << endl;
 

@@ -34,6 +34,7 @@ using namespace std;
 
 logger_t logger("VIDEO-PLAYER");
 bool g_fullscreen_p = false;
+int g_start_at = 0;
 
 int getenv_numeric( const char* szname, int default_val )
 {
@@ -116,7 +117,7 @@ static void* video_decode_context_thread(void *parg)
     try
     {
         video_decode_context vdc(penv->mp4_file_path, penv->ring_buffer);
-        if(penv->run_p) vdc();
+        if(penv->run_p) vdc(penv->start_at);
         penv->ret = 0;
     }
     catch( app_fault& e )
@@ -156,7 +157,7 @@ static void* audio_decode_context_thread(void *parg)
         logger << "AUDIO BUFFER READY:" << penv->channel << endl;
 
         audio_decode_context adc(penv->mp4_file_path, penv->ring_buffer);
-        if(penv->run_p) adc();
+        if(penv->run_p) adc(penv->start_at);
         penv->ret = 0;
     }
     catch( app_fault& e )
@@ -247,7 +248,7 @@ static void* render_audio_thread(void *parg)
             throw app_fault( "could not do ALSA handshake" );
         }
 
-        if( !penv->audio_ready->wait() )
+        if( !penv->media_ready->wait() )
         {
             throw app_fault("premature end of waiting for audio to get ready");
         }
@@ -280,7 +281,7 @@ static void* render_audio_thread(void *parg)
     return &penv->ret;
 }
 
-int run_play(const char* mp4_file_path, bool fullscreen_p)
+int run_play(const char* mp4_file_path, int start_at, bool fullscreen_p)
 {
     int VIDEO_WIDTH = getenv_numeric( "VIDEO_WIDTH", MAX_SCREEN_WIDTH);
     int VIDEO_HEIGHT = getenv_numeric( "VIDEO_HEIGHT", MAX_SCREEN_HEIGHT);
@@ -301,7 +302,7 @@ int run_play(const char* mp4_file_path, bool fullscreen_p)
     env_render_audio_context env_render_audio;
 
     synch_t< bool >  buffer_ready(false);
-    synch_t< bool > audio_ready(false);
+    synch_t< bool > media_ready(false);
 
     int ret = 0;
     pthread_t thread_vfc, thread_afc, thread_asc[3], thread_render_audio;
@@ -332,7 +333,7 @@ int run_play(const char* mp4_file_path, bool fullscreen_p)
         //
 
         env_vdc.mp4_file_path = mp4_file_path;
-        env_vdc.start_at = 0;
+        env_vdc.start_at = start_at * 1000;
         env_vdc.ring_buffer = &ring_buffer_video;
         env_vdc.run_p = true;
         env_vdc.ret = 0;
@@ -348,7 +349,7 @@ int run_play(const char* mp4_file_path, bool fullscreen_p)
 
         env_adc.mp4_file_path = mp4_file_path;
         env_adc.channel = audio_channel;
-        env_adc.start_at = 0;
+        env_adc.start_at = start_at * 1000;
         env_adc.ring_buffer = &pcm_buffers[ audio_channel ];
         env_adc.buffer_ready = &buffer_ready;
         env_adc.run_p = true;
@@ -393,7 +394,7 @@ int run_play(const char* mp4_file_path, bool fullscreen_p)
         env_render_audio.wait_timeout = WAIT_TIMEOUT;
         env_render_audio.frames_per_period = FRAMES_PER_PERIOD;
         env_render_audio.periods_mpeg = PERIODS_MPEG;
-        env_render_audio.audio_ready = &audio_ready;
+        env_render_audio.media_ready = &media_ready;
         env_render_audio.run_p = true;
         env_render_audio.debug_p = false;
 
@@ -408,7 +409,7 @@ int run_play(const char* mp4_file_path, bool fullscreen_p)
 
         //main SDL loop for everything
         //
-        sdl.message_loop(&buffer_ready, &audio_ready);
+        sdl.message_loop(&buffer_ready, &media_ready);
     }
     catch(app_fault& e)
     {
@@ -468,14 +469,22 @@ string process_param(const char* szparam)
 void parse_cmdline(int argc, char *argv[])
 {
     string param;
+    string prev_param;
 
     for(int idx = 1; idx < argc; ++idx)
     {
         param = process_param( argv[ idx ] );
+
         if( param == "fullscreen")
         {
             g_fullscreen_p = true;
         }
+        else if( prev_param == "start-at" )
+        {
+            g_start_at = atoi(param.c_str());
+        }
+
+        prev_param = param;
     }
 }
 
@@ -498,7 +507,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int ret = run_play( "/mnt/MUSIC-THD/test.hd.mp4", g_fullscreen_p );
+    int ret = run_play( "/mnt/MUSIC-THD/test.hd.mp4", g_start_at, g_fullscreen_p );
 
     av_lockmgr_register(NULL);
 

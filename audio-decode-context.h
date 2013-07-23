@@ -31,9 +31,9 @@ private:
     AVFormatContext* oc_;
 
     void buffer_primed();
-    int write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRAME& frame_out, int samples);
-    void write_frame(AVFrame* frame_in);
-    void flush_frame(AVFrame* frame_in);
+    int write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRAME& frame_out, int samples, int start_at);
+    void write_frame(AVFrame* frame_in, int start_at);
+    void flush_frame(AVFrame* frame_in, int start_at);
 
 public:
 

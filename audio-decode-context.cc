@@ -26,11 +26,12 @@ void audio_decode_context::buffer_primed()
     post_message( buffer_->primed_message_ );
 }
 
-int audio_decode_context::write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRAME& frame_out, int samples)
+int audio_decode_context::write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRAME& frame_out, int samples, int start_at)
 {
     int best_pts = av_frame_get_best_effort_timestamp(frame_) * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
     //int pkt_pts = frame_->pkt_dts * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000;
     frame_out.pts_ms = best_pts;
+    frame_out.start_at = start_at;
     frame_out.played_p = false;
     frame_out.skipped_p = false;
 
@@ -48,7 +49,7 @@ int audio_decode_context::write_frame_to_buffer(AVFrame* frame_in, AME_AUDIO_FRA
     return ret;
 }
 
-void audio_decode_context::write_frame(AVFrame* frame_in)
+void audio_decode_context::write_frame(AVFrame* frame_in, int start_at)
 {
     //copy from ffmpeg native format to the 44100 format for ALSA
     //
@@ -124,7 +125,7 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
 
                 if(frame_out_idx_ >= AUDIO_PACKET_SIZE)
                 {
-                    write_frame_to_buffer(frame_in, frame_out_, AUDIO_PACKET_SIZE);
+                    write_frame_to_buffer(frame_in, frame_out_, AUDIO_PACKET_SIZE, start_at);
                     frame_out_idx_ = 0;
                 }
             }
@@ -144,11 +145,11 @@ void audio_decode_context::write_frame(AVFrame* frame_in)
     }
 }
 
-void audio_decode_context::flush_frame(AVFrame* frame_in)
+void audio_decode_context::flush_frame(AVFrame* frame_in, int start_at)
 {
     if( frame_out_idx_ > 0 )
     {
-        write_frame_to_buffer(frame_in, frame_out_, frame_out_idx_);
+        write_frame_to_buffer(frame_in, frame_out_, frame_out_idx_, start_at);
         frame_out_idx_ = 0;
     }
 }

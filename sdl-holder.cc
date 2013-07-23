@@ -84,7 +84,7 @@ sdl_holder::~sdl_holder()
     logger << "sdl-holder destroyed" << endl;
 }
 
-void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_ready)
+void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* media_ready)
 {
 
     logger << "CREATING THE SURFACES" << endl;
@@ -97,10 +97,11 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_
     bool video_primed_p = false;
     bool ctrl_down_p = false;
     bool quitting_p = false;
+    bool media_ready_p = false;
 
     while( 1 )
     {
-        if( quitting_p )
+        if(quitting_p)
         {
             ring_buffer_video_->close_out();
 
@@ -111,13 +112,18 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_
                 (&ring_buffers_audio_[ idx ])->close_out();
             }
 
-            audio_ready->broadcast( false );
+            media_ready->broadcast( false );
 
             break;
         }
-        else if(audio_primed_p && video_primed_p)
+        else if(media_ready_p)
         {
             ring_buffer_video_->read_avail( &functor_ );
+        }
+        else if(audio_primed_p && video_primed_p)
+        {
+            media_ready->broadcast( true );
+            media_ready_p = true;
         }
         else if( !audio_primed_p )
         {
@@ -126,7 +132,6 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_
                 logger << "ALL AUDIO NOW PRIMED" << endl;
 
                 audio_primed_p = true;
-                audio_ready->broadcast( true );
             }
         }
 
@@ -214,7 +219,10 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_
         }
 
         int delay = 10;
-        usleep( delay * 1000 );
+        if(media_ready_p)
+        {
+            usleep( delay * 1000 );
+        }
     }
 }
 

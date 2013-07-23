@@ -45,7 +45,7 @@ private:
     void with_cairo(AME_VIDEO_FRAME* frame);
 
     void buffer_primed();
-    void write_frame(AVFrame* frame_in);
+    void write_frame(AVFrame* frame_in, int start_at);
 
     void test_assets();
 

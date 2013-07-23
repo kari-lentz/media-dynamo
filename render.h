@@ -49,13 +49,13 @@ protected:
             {
                 T* pframe = &pframes[ idx ];
 
-                if(pframe->pts_ms <= media_ms)
+                if(pframe->pts_ms - pframe->start_at <= media_ms)
                 {
                     pframe->skipped_p = true;
 
-                    if( !pframe->played_p && pframe->pts_ms >= highest_ms )
+                    if( !pframe->played_p && (pframe->pts_ms -pframe->start_at) >= highest_ms )
                     {
-                        highest_ms = pframe->pts_ms;
+                        highest_ms = pframe->pts_ms - pframe->start_at;
                         pframe_playable = pframe;
 
                         ++playable_count;
@@ -69,7 +69,7 @@ protected:
             }
             else if(pframe_playable)
             {
-                int drift = media_ms - pframe_playable->pts_ms;
+                int drift = media_ms - (pframe_playable->pts_ms - pframe_playable->start_at);
                 if( drift > 50 )
                 {
                     logger_ << "detected drift of:" << drift << endl;

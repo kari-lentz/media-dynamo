@@ -26,6 +26,7 @@ typedef struct
     int width;
     int height;
     int pts_ms;
+    int start_at;
     bool played_p;
     bool skipped_p;
     uint8_t* data[4];

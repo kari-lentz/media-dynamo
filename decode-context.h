@@ -163,10 +163,10 @@ protected:
         }
     }
 
-    virtual void write_frame(AVFrame* frame_in)=0;
+    virtual void write_frame(AVFrame* frame_in, int start_at)=0;
     virtual void buffer_primed() = 0;
 
-    void iter_frame()
+    void iter_frame(int start_at)
     {
         AVCodecContext* codec_context = get_codec_context();
 
@@ -195,7 +195,7 @@ protected:
             }
         }
 
-        if (packet_temp_.stream_index == stream_idx_)
+        if (packet_temp_.stream_index == stream_idx_  && packet_temp_.pts * av_q2d(format_context_->streams[ stream_idx_ ]->time_base) * 1000 >= start_at )
         {
             int got_frame = 0;
 
@@ -225,7 +225,7 @@ protected:
                     }
                 }
 
-                write_frame(frame_);
+                write_frame(frame_, start_at);
             }
 
             packet_temp_.size -= ret;
@@ -329,7 +329,7 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
 
         while(true)
         {
-            iter_frame();
+            iter_frame(start_at);
         }
 
         caux << "DONE ITERATING for stream_idx:" << stream_idx_ << endl;

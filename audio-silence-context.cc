@@ -17,7 +17,7 @@
 
 using namespace std;
 
-void audio_silence_context::write_frame()
+void audio_silence_context::write_frame(int start_at)
 {
     AME_AUDIO_FRAME frame_out;
 
@@ -71,7 +71,7 @@ void audio_silence_context::operator()()
                 ++frames;
             }
 
-            write_frame();
+            write_frame(0);
         }
     }
     catch(decode_done_t& e)

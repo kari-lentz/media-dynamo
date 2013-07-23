@@ -12,6 +12,7 @@ template  <int NUM_CHANNELS, int SAMPLES_PER_FRAME> struct ame_audio_frame_t
     bool skipped_p;
     bool played_p;
     int pts_ms;
+    int start_at;
     int samples;
     BASIC_AUDIO_SAMPLE* data[1];
     BASIC_AUDIO_SAMPLE raw_data[ SAMPLES_PER_FRAME ][ NUM_CHANNELS ];

@@ -39,7 +39,7 @@ public:
 
     static logger_t logger;
 
-    void message_loop(ready_synch_t* buffer_ready, ready_synch_t* audio_ready);
+    void message_loop(ready_synch_t* buffer_ready, ready_synch_t* media_ready);
 
 };
 

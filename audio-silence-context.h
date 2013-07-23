@@ -27,7 +27,7 @@ private:
 
     specific_streamer<audio_silence_context, AME_AUDIO_FRAME> functor_;
 
-    void write_frame();
+    void write_frame(int start_at);
 
 public:
 

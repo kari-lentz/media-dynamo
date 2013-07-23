@@ -13,7 +13,7 @@ typedef struct
     int wait_timeout;
     int frames_per_period;
     int periods_mpeg;
-    ready_synch_t* audio_ready;
+    ready_synch_t* media_ready;
     bool debug_p;
     bool run_p;
     int ret;
