@@ -120,7 +120,7 @@ protected:
     int min_frames_;
     int primed_p_;
 
-    void start_stream(int start_at = 0)
+    void find_stream()
     {
         max_pos_ = 0;
         write_pos_ = 0;
@@ -323,7 +323,7 @@ decode_context(const char* mp4_file_path, AVMediaType type, avcodec_decode_funct
 
     void iter_frames(int start_at)
     {
-        start_stream(start_at);
+        find_stream();
 
         caux << "STARTED ITERATING for stream_idx:" << stream_idx_ << endl;
 
