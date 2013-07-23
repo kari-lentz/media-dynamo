@@ -81,12 +81,12 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
     }
 
     SDL_Event event;
-    bool done_p = false;
-    bool video_primed_p = false;
     bool audio_zone_primed_p[ 4 ] = {false, false, false, false};
     bool audio_primed_p = false;
+    bool video_primed_p = false;
+    bool ctrl_down_p = false;
 
-    for( ;!done_p; )
+    while( 1 )
     {
         if(audio_primed_p && video_primed_p)
         {
@@ -101,7 +101,7 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
                     (&ring_buffers_audio[ idx ])->close_out();
                 }
 
-                done_p = true;
+                break;
             }
         }
         else if( !audio_primed_p )
@@ -119,9 +119,32 @@ void sdl_holder::message_loop(ring_buffer_video_t* ring_buffer_video, ring_buffe
         {
             switch (event.type)
             {
+            case SDL_KEYUP:
+            {
+                int code = event.key.keysym.sym;
+
+                if( code == SDLK_LCTRL || code == SDLK_RCTRL )
+                {
+                    ctrl_down_p = false;
+                }
+
+            }
             case SDL_KEYDOWN:
             {
-                logger << "The " << SDL_GetKeyName(event.key.keysym.sym) << "  key was pressed!" << endl;
+                int code = event.key.keysym.sym;
+
+                if( code == SDLK_LCTRL || code == SDLK_RCTRL )
+                {
+                    ctrl_down_p = true;
+                }
+                else
+                {
+                    if( ctrl_down_p && code == SDLK_x )
+                    {
+                        ring_buffer_video->close_out();
+                    }
+                }
+
                 break;
             }
             case MY_AUDIO_PRIMED_0:
