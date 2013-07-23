@@ -39,49 +39,6 @@ bool sdl_holder::render_frame_specific(AME_VIDEO_FRAME* pframe)
     return ret == 0;
 }
 
-void sdl_holder::wtf()
-{
-
-  int depth = 32;
-
-  Uint32 rmask = 0x00FF0000;
-  Uint32 gmask = 0x0000FF00;
-  Uint32 bmask = 0x000000FF;
-  Uint32 amask = 0x00000000;
-
-  AME_VIDEO_FRAME frame;
-
-  frame.width = 1024;
-  frame.height = 768;
-
-  for(int idx = 0; idx < 1024 * 768 * 4; ++idx)
-  {
-      frame.raw_data[idx] = 0xff;
-  }
-
-  SDL_Surface* mem_surface = SDL_CreateRGBSurfaceFrom(frame.raw_data, frame.width, frame.height, 32, surface_->pitch, rmask, gmask, bmask, amask);
-
-  if( !mem_surface )
-  {
-        stringstream ss;
-        ss << "SDL: could ceate memory surface";
-        throw app_fault( ss.str().c_str() );
-  }
-
-    int ret = SDL_BlitSurface(mem_surface, NULL, surface_, NULL);
-    SDL_UpdateRect(surface_, 0, 0, 0, 0);
-    //SDL_Flip(surface_);
-
-    if(mem_surface) SDL_FreeSurface( mem_surface );
-
-    if( ret != 0 )
-    {
-        stringstream ss;
-        ss << "SDL: could not display YUV overlay";
-        throw app_fault( ss.str().c_str() );
-    }
-}
-
 uint32_t sdl_holder::get_media_ms()
 {
     return SDL_GetTicks();

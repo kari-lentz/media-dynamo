@@ -24,8 +24,6 @@ private:
     SDL_Surface* surface_;
     specific_streamer<sdl_holder, AME_VIDEO_FRAME> functor_;
 
-    void wtf();
-
 protected:
     bool render_frame_specific(AME_VIDEO_FRAME* pframe);
     uint32_t get_media_ms();
