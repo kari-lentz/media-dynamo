@@ -13,11 +13,11 @@
 #include <string>
 #include <sstream>
 
-#include "audio-silence-context.h"
+#include "mp3-decode-context.h"
 
 using namespace std;
 
-void audio_silence_context::write_frame(int start_at)
+void mp3_decode_context::write_frame(int start_at)
 {
     AME_AUDIO_FRAME frame_out;
 
@@ -42,15 +42,15 @@ void audio_silence_context::write_frame(int start_at)
     //logger_ << "WROTE SILENCE TO AUDIO BUFFER:" << frame_out.samples << endl;
 }
 
-audio_silence_context::audio_silence_context(ring_buffer_audio_t* ring_buffer):buffer_( ring_buffer ), logger_("AUDIO-PLAYER"), min_frames_( ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) )
+mp3_decode_context::mp3_decode_context(ring_buffer_audio_t* ring_buffer):buffer_( ring_buffer ), logger_("AUDIO-PLAYER"), min_frames_( ring_buffer->get_frames_per_period() * (ring_buffer->get_periods() - 1) )
 {
 }
 
-audio_silence_context::~audio_silence_context()
+mp3_decode_context::~mp3_decode_context()
 {
 }
 
-void audio_silence_context::operator()()
+void mp3_decode_context::operator()()
 {
     int frames = 0;
     bool primed = false;

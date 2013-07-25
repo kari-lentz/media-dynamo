@@ -135,7 +135,7 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* media_
             }
         }
 
-        if( SDL_PollEvent(&event) > 0 )
+        if( media_ready_p ? (SDL_PollEvent(&event) > 0) : SDL_WaitEvent(&event) > 0)
         {
             switch (event.type)
             {
@@ -161,6 +161,7 @@ void sdl_holder::message_loop(ready_synch_t* buffer_ready, ready_synch_t* media_
                 {
                     if( ctrl_down_p && code == SDLK_x )
                     {
+                        logger << "caught quit key" << endl;
                         quitting_p = true;
                     }
                 }

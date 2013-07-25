@@ -15,18 +15,21 @@ static const unsigned long STDIN_MAX = 1000000;
 #include <sstream>
 #include <map>
 #include <mysql++/mysql++.h>
+#include <mpg123.h>
 #include <SDL/SDL.h>
 
 #include "messages.h"
 #include "env-writer.h"
 #include "audio-decode-context.h"
-#include "audio-silence-context.h"
+#include "mp3-decode-context.h"
 #include "video-decode-context.h"
 #include "render-audio.h"
 #include "video-player.h"
 #include "sdl-holder.h"
 #include "cairo-f.h"
 #include "dom-context.h"
+#include "decoder-result.h"
+#include "decoder-inst.h"
 
 #define USER_QUIT (SDL_USEREVENT + 0)
 
@@ -182,9 +185,11 @@ static void* audio_decode_context_thread(void *parg)
     return &penv->ret;
 }
 
-static void* audio_silence_context_thread(void *parg)
+static void* mp3_decode_context_thread(void *parg)
 {
-    env_audio_silence_context* penv = (env_audio_silence_context*) parg;
+    env_mp3_decode_context* penv = (env_mp3_decode_context*) parg;
+    mysqlpp::Connection conn;
+    penv->conn = &conn;
 
     try
     {
@@ -195,9 +200,9 @@ static void* audio_silence_context_thread(void *parg)
             throw app_fault("premature end of audio silence");
         }
 
-        audio_silence_context asc(penv->ring_buffer);
+        decoder_inst mp3_context(penv);
 
-        if(penv->run_p) asc();
+        if(penv->run_p) mp3_context();
         penv->ret = 0;
     }
     catch( app_fault& e )
@@ -298,14 +303,14 @@ int run_play(const char* mp4_file_path, int start_at, bool fullscreen_p)
 
     env_video_decode_context env_vdc;
     env_audio_decode_context env_adc;
-    env_audio_silence_context env_asc[3];
+    env_mp3_decode_context env_mp3[3];
     env_render_audio_context env_render_audio;
 
     synch_t< bool >  buffer_ready(false);
     synch_t< bool > media_ready(false);
 
     int ret = 0;
-    pthread_t thread_vfc, thread_afc, thread_asc[3], thread_render_audio;
+    pthread_t thread_vfc, thread_afc, thread_mp3[3], thread_render_audio;
     list<pthread_t*> threads;
 
     logger << "welcome to media dynamo" << endl;
@@ -320,7 +325,7 @@ int run_play(const char* mp4_file_path, int start_at, bool fullscreen_p)
 
     for(int idx=0; idx < 3; ++idx)
     {
-        threads.push_back(&thread_asc[idx]);
+        threads.push_back(&thread_mp3[idx]);
     }
 
     threads.push_back(&thread_render_audio);
@@ -367,13 +372,13 @@ int run_play(const char* mp4_file_path, int start_at, bool fullscreen_p)
         for( int idx = 0; idx < 3; ++idx )
         {
             int channel = silence_channels[ idx ];
-            env_asc[idx].channel = channel;
-            env_asc[idx].ring_buffer = &pcm_buffers[ channel ];
-            env_asc[idx].buffer_ready = &buffer_ready;
-            env_asc[idx].run_p = true;
-            env_asc[idx].ret = 0;
+            env_mp3[idx].channel = channel;
+            env_mp3[idx].ring_buffer = &pcm_buffers[ channel ];
+            env_mp3[idx].buffer_ready = &buffer_ready;
+            env_mp3[idx].run_p = true;
+            env_mp3[idx].ret = 0;
 
-            ret = pthread_create( &thread_asc[idx], NULL, &audio_silence_context_thread, &env_asc[idx] );
+            ret = pthread_create( &thread_mp3[idx], NULL, &mp3_decode_context_thread, &env_mp3[idx] );
 
             if( ret < 0 )
             {
@@ -492,6 +497,7 @@ int main(int argc, char *argv[])
 {
     av_register_all();
     dom_context_t::register_all();
+    decoder_result state ( decoder_result::ALL_CHANNEL,  "mpg123_init", mpg123_init() );
 
     parse_cmdline(argc, argv);
 
@@ -512,6 +518,7 @@ int main(int argc, char *argv[])
     av_lockmgr_register(NULL);
 
     SDL_Quit();
+    mpg123_exit();
 
     sdl_holder::logger << "final bye" << endl;
 
